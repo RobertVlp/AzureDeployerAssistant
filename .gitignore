@@ -1,0 +1,4 @@
+prompt.txt
+venv/
+.env
+assistant/__pycache__/
