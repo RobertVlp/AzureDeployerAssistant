@@ -1,11 +1,23 @@
 from azure.mgmt.storage import StorageManagementClient
 from azure.mgmt.keyvault import KeyVaultManagementClient
 from azure.mgmt.web import WebSiteManagementClient
+from azure.mgmt.resource import ResourceManagementClient
+from azure.core.exceptions import ResourceExistsError
 
 class Assistant:
     def __init__(self, credential, subscription_id):
         self.credential = credential
         self.subscription_id = subscription_id
+
+    def create_resource_group(self, resource_group_name, location) -> str:
+        resource_client = ResourceManagementClient(self.credential, self.subscription_id)
+
+        resource_group = resource_client.resource_groups.create_or_update(
+            resource_group_name,
+            {'location': location}
+        )
+
+        return f"Resource group {resource_group.name} created successfully."
 
     def create_storage_account(self, resource_group_name, storage_account_name, location) -> str:
         storage_client = StorageManagementClient(self.credential, self.subscription_id)
@@ -76,37 +88,40 @@ class Assistant:
 
         app_service_plan = app_service_plan_async_operation.result()
 
-        print(f"App Service Plan {app_service_plan.name} created successfully.")
+        try:
+            function_app_async_operation = web_client.web_apps.begin_create_or_update(
+                resource_group_name,
+                function_app_name,
+                {
+                    'location': location,
+                    'server_farm_id': '/subscriptions/{}/resourceGroups/{}/providers/Microsoft.Web/serverfarms/{}'
+                                        .format(self.subscription_id, resource_group_name, app_service_plan.name),
+                    'site_config': {
+                        'app_settings': [
+                            {
+                                'name': 'AzureWebJobsStorage', 
+                                'value': 'DefaultEndpointsProtocol=https;AccountName={};AccountKey={};EndpointSuffix=core.windows.net'
+                                            .format(storage_account.name, storage_account.primary_endpoints.blob)
+                            },
+                            {'name': 'FUNCTIONS_EXTENSION_VERSION', 'value': '~3'},
+                            {'name': 'WEBSITE_RUN_FROM_PACKAGE', 'value': '1'}
+                        ],
+                        'linux_fx_version': 'PYTHON|3.8'
+                    },
+                    'kind': 'functionapp'
+                }
+            )
 
-        function_app_async_operation = web_client.web_apps.begin_create_or_update(
-            resource_group_name,
-            function_app_name,
-            {
-                'location': location,
-                'server_farm_id': '/subscriptions/{}/resourceGroups/{}/providers/Microsoft.Web/serverfarms/{}'
-                                    .format(self.subscription_id, resource_group_name, app_service_plan.name),
-                'site_config': {
-                    'app_settings': [
-                        {
-                            'name': 'AzureWebJobsStorage', 
-                            'value': 'DefaultEndpointsProtocol=https;AccountName={};AccountKey={};EndpointSuffix=core.windows.net'
-                                        .format(storage_account.name, storage_account.primary_endpoints.blob)
-                        },
-                        {'name': 'FUNCTIONS_EXTENSION_VERSION', 'value': '~3'},
-                        {'name': 'WEBSITE_RUN_FROM_PACKAGE', 'value': '1'}
-                    ],
-                    'linux_fx_version': 'PYTHON|3.8'
-                },
-                'kind': 'functionapp'
-            }
-        )
+            function_app = function_app_async_operation.result()
 
-        function_app = function_app_async_operation.result()
+            return f"Function App {function_app.name} created successfully."
 
-        print(f"Function App {function_app.name} created successfully.")
-    
+        except ResourceExistsError as e:
+            return f"Error: {e.message}"
+        
     def get_available_functions(self):
         return {
+            "create_resource_group": self.create_resource_group,
             "create_storage_account": self.create_storage_account,
             "create_key_vault": self.create_key_vault,
             "create_function_app": self.create_function_app
