@@ -25,7 +25,7 @@ class EventHandler(AssistantEventHandler):
                 raise Exception("Function requested by the model does not exist.")
             
             function_to_call = available_functions[tool.function.name]
-            tool_response = function_to_call(**json.loads(tool.function.arguments))
+            tool_response = function_to_call(json.loads(tool.function.arguments))
             tool_outputs.append({"tool_call_id": tool.id, "output": tool_response})
         
         self.submit_tool_outputs(tool_outputs, run_id)
