@@ -1,7 +1,7 @@
-from keyVault.KeyVaultManager import KeyVaultManager
-from functionApp.FunctionAppManager import FunctionAppManager
-from resourceGroup.ResourceGroupManager import ResourceGroupManager
-from storageAccount.StorageAccountManager import StorageAccountManager
+from assistant.keyVault.KeyVaultManager import KeyVaultManager
+from assistant.functionApp.FunctionAppManager import FunctionAppManager
+from assistant.resourceGroup.ResourceGroupManager import ResourceGroupManager
+from assistant.storageAccount.StorageAccountManager import StorageAccountManager
 
 class Assistant:
     def __init__(self, credential, subscription_id):

@@ -1,7 +1,4 @@
-prompt.txt
-venv/
-.env
-assistant/__pycache__/
+__pycache__/
 functionApp/__pycache__/
 keyVault/__pycache__/
 resourceGroup/__pycache__/

@@ -1,0 +1,13 @@
+# Test prompt
+prompt.txt
+
+# Virtual environment
+venv/
+
+# Environment variables
+.env
+
+__pycache__/
+
+# Bruno collection
+AzDeployerBE/
