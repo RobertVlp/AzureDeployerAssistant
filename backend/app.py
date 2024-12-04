@@ -10,6 +10,7 @@ from openai import AssistantEventHandler
 from assistant.Assistant import Assistant
 
 app = Flask(__name__)
+app.config['CORS_HEADERS'] = 'Content-Type'
 CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
 
 class EventHandler(AssistantEventHandler):
@@ -36,16 +37,20 @@ class EventHandler(AssistantEventHandler):
             tool_response = function_to_call(json.loads(tool.function.arguments))
             tool_outputs.append({"tool_call_id": tool.id, "output": tool_response})
 
-        self.submit_tool_outputs(tool_outputs, run_id)
+        self.messages.append(self.submit_tool_outputs(tool_outputs, run_id))
 
     def submit_tool_outputs(self, tool_outputs, run_id):
+        eventHandler = EventHandler()
+
         with client.beta.threads.runs.submit_tool_outputs_stream(
             thread_id=self.current_run.thread_id,
             run_id=self.current_run.id,
             tool_outputs=tool_outputs,
-            event_handler=EventHandler(),
+            event_handler=eventHandler,
         ) as stream:
             stream.until_done()
+
+        return eventHandler.messages
 
 load_dotenv()
 
@@ -64,6 +69,13 @@ available_functions = deployer.get_available_functions()
 
 # Create a thread
 thread = client.beta.threads.create()
+
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST')
+    return response
 
 @app.route('/send_message', methods=['POST'])
 def receive_message():
