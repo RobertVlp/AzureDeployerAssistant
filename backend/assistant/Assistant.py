@@ -4,7 +4,7 @@ from assistant.resourceGroup.ResourceGroupManager import ResourceGroupManager
 from assistant.storageAccount.StorageAccountManager import StorageAccountManager
 
 class Assistant:
-    def __init__(self, credential, subscription_id):
+    def __init__(self, credential, subscription_id=""):
         self.credential = credential
         self.subscription_id = subscription_id
         self.key_vault_manager = KeyVaultManager(credential, subscription_id)

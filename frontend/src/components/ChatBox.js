@@ -1,18 +1,21 @@
-import React, { useState, useEffect, useRef } from 'react';
 import { Container, Row, Form, Button, InputGroup, ListGroup, Spinner } from 'react-bootstrap';
+import React, { useState, useEffect, useRef } from 'react';
 import { FaPaperPlane } from 'react-icons/fa';
-import './ChatBox.css';
+import './style.css';
 
-function ChatBox() {
+function ChatBox({ subscriptionId }) {
     const [messages, setMessages] = useState([]);
     const [inputMessage, setInputMessage] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
     const chatContainerRef = useRef(null);
     const textareaRef = useRef(null);
 
     const handleSubmit = async (event) => {
         event.preventDefault();
-        setIsLoading(true);
+
+        if (!subscriptionId) {
+            alert('Subscription ID is required, please enter it above.');
+            return;
+        }
 
         const newMessages = [...messages, { text: inputMessage, type: 'user' }];
         setMessages(newMessages);
@@ -27,7 +30,7 @@ function ChatBox() {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ message: inputMessage }),
+                body: JSON.stringify({ message: inputMessage, subscriptionId: subscriptionId })
             });
 
             if (!response.ok) {
@@ -39,8 +42,6 @@ function ChatBox() {
         } catch (error) {
             console.error('Error sending message:', error);
             setMessages(newMessages);
-        } finally {
-            setIsLoading(false);
         }
     };
 
@@ -67,8 +68,12 @@ function ChatBox() {
     return (
         <Container>
             <Row className="justify-content-md-center">
-                <Container className="chat-box justify-content-md-center" style={{ width: "50%", maxHeight: "400px", overflowY: "auto" }} ref={chatContainerRef}>
-                    <ListGroup>
+                <Container 
+                    className="chat-box"
+                    style={{ width: "60%", maxHeight: "400px", overflowY: "auto" }}
+                    ref={chatContainerRef}
+                >
+                    <ListGroup className='d-grid'>
                         {messages.map((msg, index) => (
                             <ListGroup.Item key={index} className={msg.type === 'user' ? 'user-message' : 'assistant-message'}>
                                 <strong>{msg.type === 'user' ? 'You:' : 'Assistant:'}</strong> {msg.text}

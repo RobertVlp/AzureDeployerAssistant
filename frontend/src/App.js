@@ -1,15 +1,9 @@
-import MessageBar from './components/ChatBox';
+import ChatInterface from './components/ChatInterface';
 import './App.css';
 
 function App() {
   return (
-    <>
-      <div className="App">
-        <h1>Azure Deployer Assistant</h1>
-      </div>
-
-      <MessageBar />
-    </>
+    <ChatInterface />
   );
 }
 

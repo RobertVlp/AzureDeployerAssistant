@@ -28,6 +28,8 @@ class EventHandler(AssistantEventHandler):
 
     def handle_requires_action(self, data, run_id):
         tool_outputs = []
+        deployer = Assistant(credential, subscription_id)
+        available_functions = deployer.get_available_functions()
         
         for tool in data.required_action.submit_tool_outputs.tool_calls:
             if tool.function.name not in available_functions:
@@ -54,18 +56,15 @@ class EventHandler(AssistantEventHandler):
 
 load_dotenv()
 
-subscription_id = os.getenv("AZURE_SUBSCRIPTION_ID")
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 assistant_id = os.getenv("ASSISTANT_ID")
 assistant = client.beta.assistants.retrieve(assistant_id)
 
+subscription_id = ''
+
 # Authenticate with Azure
 credential = DefaultAzureCredential()
-
-# Create an assistant
-deployer = Assistant(credential, subscription_id)
-available_functions = deployer.get_available_functions()
 
 # Create a thread
 thread = client.beta.threads.create()
@@ -79,8 +78,11 @@ def after_request(response):
 
 @app.route('/send_message', methods=['POST'])
 def receive_message():
+    global subscription_id
+
     data = request.json
     content = data.get('message')
+    subscription_id = data.get('subscriptionId')
 
     if not content:
         return jsonify({"error": "No message provided"}), 400
