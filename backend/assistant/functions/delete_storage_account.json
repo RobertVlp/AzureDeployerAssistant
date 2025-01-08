@@ -1,0 +1,23 @@
+{
+    "name": "delete_storage_account",
+    "description": "Delete a storage account",
+    "strict": true,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "resource_group_name": {
+          "type": "string",
+          "description": "The name of the resource group."
+        },
+        "storage_account_name": {
+          "type": "string",
+          "description": "The name of the storage account."
+        }
+      },
+      "required": [
+        "resource_group_name",
+        "storage_account_name"
+      ],
+      "additionalProperties": false
+    }
+  }

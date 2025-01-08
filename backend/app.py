@@ -1,5 +1,6 @@
 import os
 import json
+import logging
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from openai import OpenAI
@@ -9,7 +10,10 @@ from typing_extensions import override
 from openai import AssistantEventHandler
 from assistant.Assistant import Assistant
 
+logging.basicConfig(level=logging.INFO)
+
 app = Flask(__name__)
+logger = logging.getLogger(__name__)
 app.config['CORS_HEADERS'] = 'Content-Type'
 CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
 
@@ -35,8 +39,10 @@ class EventHandler(AssistantEventHandler):
             if tool.function.name not in available_functions:
                 raise Exception("Function requested by the model does not exist.")
             
+            logger.info(f"Calling function: {tool.function.name} with arguments: {tool.function.arguments}")
+
             function_to_call = available_functions[tool.function.name]
-            tool_response = function_to_call(json.loads(tool.function.arguments))
+            tool_response = function_to_call(**json.loads(tool.function.arguments))
             tool_outputs.append({"tool_call_id": tool.id, "output": tool_response})
 
         self.messages.append(self.submit_tool_outputs(tool_outputs, run_id))
@@ -61,7 +67,7 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 assistant_id = os.getenv("ASSISTANT_ID")
 assistant = client.beta.assistants.retrieve(assistant_id)
 
-subscription_id = ''
+subscription_id = os.getenv("AZURE_SUBSCRIPTION_ID")
 
 # Authenticate with Azure
 credential = DefaultAzureCredential()
@@ -78,11 +84,10 @@ def after_request(response):
 
 @app.route('/send_message', methods=['POST'])
 def receive_message():
-    global subscription_id
+    logger.info(f"Received request: {request.json}")
 
     data = request.json
     content = data.get('message')
-    subscription_id = data.get('subscriptionId')
 
     if not content:
         return jsonify({"error": "No message provided"}), 400

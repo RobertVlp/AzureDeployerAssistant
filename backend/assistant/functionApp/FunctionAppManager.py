@@ -17,7 +17,7 @@ class FunctionAppManager:
         # Create an App Service Plan
         app_service_plan_async_operation = web_client.app_service_plans.begin_create_or_update(
             resource_group_name,
-            'myAppServicePlan',
+            f'{function_app_name}ServicePlan',
             {
                 'location': location,
                 'sku': {
@@ -61,3 +61,14 @@ class FunctionAppManager:
 
         except ResourceExistsError as e:
             return f"Error: {e.message}"
+        
+    def delete_function_app(self, resource_group_name, function_app_name):
+        web_client = WebSiteManagementClient(self.credential, self.subscription_id)
+
+        web_client.app_service_plans.delete(resource_group_name, f'{function_app_name}ServicePlan')
+        web_client.web_apps.delete(resource_group_name, function_app_name)
+
+        return f"Function App {function_app_name} deleted."
+    
+    def get_available_functions(self) -> dict:
+        return {func: getattr(self, func) for func in dir(self) if callable(getattr(self, func)) and not func.startswith("__")}

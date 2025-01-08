@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { FaPaperPlane } from 'react-icons/fa';
 import './style.css';
 
-function ChatBox({ subscriptionId }) {
+function ChatBox() {
     const [messages, setMessages] = useState([]);
     const [inputMessage, setInputMessage] = useState('');
     const chatContainerRef = useRef(null);
@@ -11,11 +11,6 @@ function ChatBox({ subscriptionId }) {
 
     const handleSubmit = async (event) => {
         event.preventDefault();
-
-        if (!subscriptionId) {
-            alert('Subscription ID is required, please enter it above.');
-            return;
-        }
 
         const newMessages = [...messages, { text: inputMessage, type: 'user' }];
         setMessages(newMessages);
@@ -30,7 +25,7 @@ function ChatBox({ subscriptionId }) {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ message: inputMessage, subscriptionId: subscriptionId })
+                body: JSON.stringify({ message: inputMessage })
             });
 
             if (!response.ok) {

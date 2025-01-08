@@ -1,0 +1,23 @@
+{
+    "name": "delete_function_app",
+    "description": "Delete a function app",
+    "strict": true,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "resource_group_name": {
+          "type": "string",
+          "description": "The name of the resource group."
+        },
+        "function_app_name": {
+          "type": "string",
+          "description": "The name of the function app."
+        }
+      },
+      "required": [
+        "resource_group_name",
+        "function_app_name"
+      ],
+      "additionalProperties": false
+    }
+}

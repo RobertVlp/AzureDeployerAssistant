@@ -1,0 +1,23 @@
+{
+    "name": "delete_key_vault",
+    "description": "Delete a key vault",
+    "strict": true,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "resource_group_name": {
+          "type": "string",
+          "description": "The name of the resource group."
+        },
+        "key_vault_name": {
+          "type": "string",
+          "description": "The name of the key vault."
+        }
+      },
+      "required": [
+        "resource_group_name",
+        "key_vault_name"
+      ],
+      "additionalProperties": false
+    }
+  }
