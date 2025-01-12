@@ -21,7 +21,10 @@ class ResourceGroupManager:
         return f"Resource group {resource_group_name} deleted successfully."
     
     def get_resource_group_info(self, resource_group_name) -> dict:
-        resource_group = self.client.resource_groups.get(resource_group_name)
+        try:
+            resource_group = self.client.resource_groups.get(resource_group_name)
+        except:
+            return f"Resource group {resource_group_name} not found."
 
         resources = self.client.resources.list_by_resource_group(resource_group_name)
         resources_info = [
