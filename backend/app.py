@@ -32,7 +32,6 @@ class EventHandler(AssistantEventHandler):
 
     def handle_action(self, tool_calls):
         tool_outputs = []
-        deployer = Assistant(credential, subscription_id)
         available_functions = deployer.get_available_functions()
         
         for tool in tool_calls:
@@ -48,11 +47,11 @@ class EventHandler(AssistantEventHandler):
         return tool_outputs
 
     def handle_requires_action(self, data, run_id):
-        required_actrion_tool_calls = data.required_action.submit_tool_outputs.tool_calls
+        required_action_tool_calls = data.required_action.submit_tool_outputs.tool_calls
         pending_tool_calls = []
         tool_calls = []
 
-        for tool_call in required_actrion_tool_calls:
+        for tool_call in required_action_tool_calls:
             if tool_call.function.name.startswith("create_") or tool_call.function.name.startswith("delete_"):
                 pending_tool_calls.append(tool_call)
             else:
@@ -74,6 +73,12 @@ class EventHandler(AssistantEventHandler):
 
     def execute_pending_actions(self, response):
         run_id, thread_id, tool_calls = pending_actions.pop(0)
+
+        run = client.beta.threads.runs.retrieve(run_id=run_id, thread_id=thread_id)
+
+        if run.status == 'expired':
+            self.messages.append("The action has expired. Please try again.")
+            return
 
         if response.strip().lower() == "yes":
             tool_outputs = self.handle_action(tool_calls)
@@ -112,6 +117,7 @@ subscription_id = os.getenv("AZURE_SUBSCRIPTION_ID")
 
 # Authenticate with Azure
 credential = DefaultAzureCredential()
+deployer = Assistant(credential, subscription_id)
 
 # Create a thread
 thread = client.beta.threads.create()
@@ -136,6 +142,24 @@ def receive_message():
         return jsonify({"error": "No message provided"}), 400
 
     try:
+        # Cancel any pending actions if a confirmation message is not received
+        if pending_actions:
+            logger.info(f"Cancelling pending actions: {pending_actions}")
+
+            for run_id, thread_id, _ in pending_actions:
+                run = client.beta.threads.runs.retrieve(run_id=run_id, thread_id=thread_id)
+
+                if run.status != 'expired':
+                    client.beta.threads.runs.cancel(run_id=run_id, thread_id=thread_id)
+
+                client.beta.threads.messages.create(
+                    thread_id=thread_id,
+                    role="assistant",
+                    content="The action was cancelled."
+                )
+
+            pending_actions.clear()
+
         event_handler = EventHandler()
 
         client.beta.threads.messages.create(

@@ -17,7 +17,6 @@
 }
 
 .user-message, .assistant-message {
-    border-radius: 10px;
     margin: 5px 0;
     word-wrap: break-word;
     white-space: pre-wrap;
@@ -46,4 +45,19 @@
     text-align: center;
     margin-top: 20px;
     margin-bottom: 20px;
+}
+
+.confirm-action-button {
+    margin-right: 10px;
+    padding: 5px 15px !important;
+    font-size: 12px !important;
+    border-radius: 0.75em !important;
+    background-color: #d7d0d0 !important;
+    border: 2px solid #4b4b4b !important;
+    color: #000000 !important;
+}
+
+.confirm-action-button:hover {
+    background-color: #4b4b4b !important;
+    color: #fff !important;
 }

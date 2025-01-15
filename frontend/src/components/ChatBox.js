@@ -8,45 +8,15 @@ function ChatBox() {
     const [inputMessage, setInputMessage] = useState('');
     const chatContainerRef = useRef(null);
     const textareaRef = useRef(null);
-
-    // const handleSubmit = async (event) => {
-    //     event.preventDefault();
-
-    //     const newMessages = [...messages, { text: inputMessage, type: 'user' }];
-    //     setMessages(newMessages);
-    //     setInputMessage('');
-
-    //     const tempMessages = [...newMessages, { text: '', type: 'assistant', isLoading: true }];
-    //     setMessages(tempMessages);
-
-    //     try {
-    //         const serverUrl = 'http://localhost:5000/send_message';
-
-    //         const response = await fetch(serverUrl, {
-    //             method: 'POST',
-    //             headers: {
-    //                 'Content-Type': 'application/json',
-    //             },
-    //             body: JSON.stringify({ message: inputMessage })
-    //         });
-
-    //         if (!response.ok) {
-    //             throw new Error('Error processing message: ' + response.statusText);
-    //         }
-
-    //         const data = await response.json();
-    //         setMessages([...newMessages, { text: data['response'][0], type: 'assistant' }]);
-    //     } catch (error) {
-    //         console.error('Error sending message:', error);
-    //         setMessages(newMessages);
-    //     }
-    // };
+    const waitingReplyRef = useRef(false);
 
     const handleAction = async (action, url) => {
         try {
             // Add a temporary message with a spinner
             const tempMessage = { text: '', type: 'assistant', isLoading: true };
             setMessages((prevMessages) => [...prevMessages, tempMessage]);
+
+            waitingReplyRef.current = true;
     
             const response = await fetch(url, {
                 method: 'POST',
@@ -57,40 +27,58 @@ function ChatBox() {
             });
     
             if (!response.ok) {
-                throw new Error('Error confirming action: ' + response.statusText);
+                throw new Error(response.status + response.statusText);
             }
     
             const data = await response.json();
     
             // Remove the temporary message
-            setMessages((prevMessages) => prevMessages.filter(msg => !msg.isLoading));
+            setMessages((prevMessages) => {
+                if (prevMessages[prevMessages.length - 1] === tempMessage) {
+                    prevMessages.pop();
+                }
+                return [...prevMessages];
+            });
+
+            const assistantResponse = data['response'][0];
+            const isPending = String(assistantResponse).startsWith('The following actions will be performed:');
     
             // Add the new message from the assistant
-            setMessages((prevMessages) => [...prevMessages, { text: data['response'][0], type: 'assistant' }]);
+            setMessages((prevMessages) => [...prevMessages, { text: assistantResponse, type: 'assistant', isPending: isPending }]);
+            waitingReplyRef.current = false;
         } catch (error) {
-            console.error('Error confirming action:', error);
+            setMessages((prevMessages) => {
+                prevMessages.push({ text: `An error occurred while processing your request: ${error}`, type: 'assistant' });
+                return [...prevMessages];
+            });
         }
     };
     
-    const handleSubmit = (event) => {
+    const handleSubmit = async (event) => {
         event.preventDefault();
         const action = inputMessage.trim();
 
         if (action) {
-            const newMessages = [...messages, { text: inputMessage, type: 'user' }];
             const serverUrl = 'http://localhost:5000/send_message';
 
-            setMessages(newMessages);
+            // Check if the last message is pending and update it
+            if (messages.length > 0 && messages[messages.length - 1].isPending) {
+                messages[messages.length - 1].isPending = false;
+                setMessages([...messages]);
+            }
+
+            setMessages([...messages, { text: inputMessage, type: 'user' }]);
             setInputMessage('');
-            handleAction(action, serverUrl);
+            await handleAction(action, serverUrl);
         }
     };
     
-    const handleConfirmAction = (action) => {
+    const handleConfirmAction = async (action) => {
         const serverUrl = 'http://localhost:5000/confirm_action';
-
-        handleAction(action, serverUrl);
-        setMessages((prevMessages) => prevMessages.filter(msg => !String(msg.text).startsWith('The following actions will be performed:')));
+        messages[messages.length - 1].isPending = false;
+        
+        setMessages([...messages]);
+        await handleAction(action, serverUrl);
     };
 
     useEffect(() => {
@@ -106,10 +94,10 @@ function ChatBox() {
         }
     }, [inputMessage]);
 
-    const handleKeyDown = (event) => {
-        if (event.key === 'Enter' && !event.shiftKey) {
+    const handleKeyDown = async (event) => {
+        if (event.key === 'Enter' && !event.shiftKey && !waitingReplyRef.current) {
             event.preventDefault();
-            handleSubmit(event);
+            await handleSubmit(event);
         }
     };
 
@@ -123,25 +111,23 @@ function ChatBox() {
                 >
                     <ListGroup className='d-grid'>
                         {messages.map((msg, index) => (
-                            <ListGroup.Item key={index} className={msg.type === 'user' ? 'user-message' : 'assistant-message'}>
+                            <ListGroup.Item key={index} className={msg.type === 'user' ? 'user-message' : 'assistant-message'} style={{ borderRadius: '1.25em' }}>
                                 <strong>{msg.type === 'user' ? 'You:' : 'Assistant:'}</strong> {msg.text}
                                 {msg.isLoading && (
                                     <Spinner animation="border" size="sm" />
                                 )}
                                 
-                                {msg.type === 'assistant' && String(msg.text).startsWith('The following actions will be performed:') && (
+                                {msg.type === 'assistant' && msg.isPending && (
                                     <Container className="d-flex mt-2"> 
-                                        <Button 
+                                        <Button className='confirm-action-button'
                                             variant="primary" 
                                             onClick={() => handleConfirmAction('Yes')}
-                                            style={{ marginRight: '10px', padding: '5px 20px' }}
                                         >
                                             Yes
                                         </Button>
-                                        <Button 
+                                        <Button className='confirm-action-button'
                                             variant="secondary" 
                                             onClick={() => handleConfirmAction('No')}
-                                            style={{ marginRight: '10px', padding: '5px 20px' }}
                                         >
                                             No
                                         </Button>

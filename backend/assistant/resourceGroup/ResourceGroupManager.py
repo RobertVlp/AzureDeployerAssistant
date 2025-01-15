@@ -7,20 +7,26 @@ class ResourceGroupManager:
         self.client = ResourceManagementClient(credential, subscription_id)
 
     def create_resource_group(self, resource_group_name, location) -> str:
-        resource_group = self.client.resource_groups.create_or_update(
-            resource_group_name,
-            {'location': location}
-        )
+        try:
+            resource_group = self.client.resource_groups.create_or_update(
+                resource_group_name,
+                {'location': location}
+            )
 
-        return f"Resource group {resource_group.name} created successfully."
+            return f"Resource group {resource_group.name} created successfully."
+        except Exception as e:
+            return f"Error creating resource group: {str(e)}"
     
     def delete_resource_group(self, resource_group_name) -> str:
-        resource_group_operation = self.client.resource_groups.begin_delete(resource_group_name)
-        resource_group_operation.result()
+        try:
+            resource_group_operation = self.client.resource_groups.begin_delete(resource_group_name)
+            resource_group_operation.result()
 
-        return f"Resource group {resource_group_name} deleted successfully."
+            return f"Resource group {resource_group_name} deleted successfully."
+        except Exception as e:
+            return f"Error deleting resource group: {str(e)}"
     
-    def get_resource_group_info(self, resource_group_name) -> dict:
+    def get_resource_group_info(self, resource_group_name) -> str:
         try:
             resource_group = self.client.resource_groups.get(resource_group_name)
         except:

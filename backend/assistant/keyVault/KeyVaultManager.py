@@ -4,8 +4,9 @@ class KeyVaultManager:
     def __init__(self, credential, subscription_id):
         self.client = KeyVaultManagementClient(credential, subscription_id)
 
-    def create_key_vault(self, resource_group_name, key_vault_name, location, access_policies=[]):
-        tenantId = "2d8cc8ba-8dda-4334-9e5c-fac2092e9bac" # UPB - Azure for Students
+    def create_key_vault(self, resource_group_name, key_vault_name, location, 
+                            tenantId="2d8cc8ba-8dda-4334-9e5c-fac2092e9bac", access_policies=[]) -> str:
+        # tenantId "2d8cc8ba-8dda-4334-9e5c-fac2092e9bac" UPB - Azure for Students
         
         key_vault_params = {
             'location': location,
@@ -25,21 +26,27 @@ class KeyVaultManager:
                 }
             )
 
-        key_vault = self.client.vaults.begin_create_or_update(
-            resource_group_name,
-            key_vault_name,
-            key_vault_params
-        ).result()
+        try:
+            key_vault = self.client.vaults.begin_create_or_update(
+                resource_group_name,
+                key_vault_name,
+                key_vault_params
+            ).result()
 
-        return f"Key Vault {key_vault.name} created successfully."
+            return f"Key Vault {key_vault.name} created successfully."
+        except Exception as e:
+            return f"Error creating key vault: {str(e)}"
     
     def delete_key_vault(self, resource_group_name, key_vault_name):
-        self.client.vaults.delete(
-            resource_group_name,
-            key_vault_name
-        )
+        try:
+            self.client.vaults.delete(
+                resource_group_name,
+                key_vault_name
+            )
 
-        return f"Key Vault {key_vault_name} deleted."
+            return f"Key Vault {key_vault_name} deleted."
+        except Exception as e:
+            return f"Error deleting key vault: {str(e)}"
     
     def get_available_functions(self) -> dict:
         return {func: getattr(self, func) for func in dir(self) if callable(getattr(self, func)) and not func.startswith("__")}

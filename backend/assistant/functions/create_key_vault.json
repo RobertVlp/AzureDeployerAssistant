@@ -17,6 +17,10 @@
         "type": "string",
         "description": "The location where the key vault is deployed."
       },
+      "tenantId": {
+        "type": "string",
+        "description": "The id of the tennant for which access policies are defined."
+      },
       "access_policies": {
         "type": "array",
         "description": "Access policies for the key vault.",
