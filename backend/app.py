@@ -47,9 +47,9 @@ class EventHandler(AssistantEventHandler):
         return tool_outputs
 
     def handle_requires_action(self, data, run_id):
-        required_action_tool_calls = data.required_action.submit_tool_outputs.tool_calls
-        pending_tool_calls = []
         tool_calls = []
+        pending_tool_calls = []
+        required_action_tool_calls = data.required_action.submit_tool_outputs.tool_calls
 
         for tool_call in required_action_tool_calls:
             if tool_call.function.name.startswith("create_") or tool_call.function.name.startswith("delete_"):
@@ -110,10 +110,41 @@ load_dotenv()
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+if not client.api_key:
+    logger.error("OpenAI API key not found in environment variables.")
+    exit(1)
+
 assistant_id = os.getenv("ASSISTANT_ID")
-assistant = client.beta.assistants.retrieve(assistant_id)
+
+if not assistant_id:
+    try:
+        assistant = client.beta.assistants.create(
+            model="gpt-4o",
+            name="Azure Deployer Assistant",
+            temperature=0.7,
+            top_p=1,
+            instructions="You are assisting with resource deployment in Azure. Use the available functions to complete the task.",
+        )
+
+        files = os.listdir('assistant/functions')
+        functions = []
+
+        for file in files:
+            with open(f'assistant/functions/{file}', 'r') as f:
+                functions.append({"type": "function", "function": json.loads(f.read())})
+
+        client.beta.assistants.update(assistant.id, tools=functions)
+    except Exception as e:
+        logger.error(f"An error occurred while creating the assistant: {str(e)}")
+        exit(1)
+else:
+    assistant = client.beta.assistants.retrieve(assistant_id)
 
 subscription_id = os.getenv("AZURE_SUBSCRIPTION_ID")
+
+if not subscription_id:
+    logger.error("Azure subscription ID not found in environment variables.")
+    exit(1)
 
 # Authenticate with Azure
 credential = DefaultAzureCredential()
