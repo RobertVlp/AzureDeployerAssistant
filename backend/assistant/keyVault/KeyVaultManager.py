@@ -47,6 +47,17 @@ class KeyVaultManager:
             return f"Key Vault {key_vault_name} deleted."
         except Exception as e:
             return f"Error deleting key vault: {str(e)}"
+        
+    def get_key_vault_info(self, resource_group_name, key_vault_name):
+        try:
+            key_vault = self.client.vaults.get(
+                resource_group_name,
+                key_vault_name
+            )
+
+            return str(key_vault.as_dict())
+        except Exception as e:
+            return f"Error getting key vault information: {str(e)}"
     
     def get_available_functions(self) -> dict:
         return {func: getattr(self, func) for func in dir(self) if callable(getattr(self, func)) and not func.startswith("__")}

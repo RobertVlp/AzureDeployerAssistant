@@ -1,6 +1,7 @@
 import { Container, Row, Form, Button, InputGroup, ListGroup, Spinner } from 'react-bootstrap';
 import React, { useState, useEffect, useRef } from 'react';
 import { FaPaperPlane } from 'react-icons/fa';
+import { marked } from 'marked';
 import './style.css';
 
 function ChatBox() {
@@ -40,8 +41,8 @@ function ChatBox() {
                 return [...prevMessages];
             });
 
-            const assistantResponse = data['response'][0];
-            const isPending = String(assistantResponse).startsWith('The following actions will be performed:');
+            const assistantResponse = String(data['response'][0]);
+            const isPending = assistantResponse.startsWith('The following actions will be performed:');
     
             // Add the new message from the assistant
             setMessages((prevMessages) => [...prevMessages, { text: assistantResponse, type: 'assistant', isPending: isPending }]);
@@ -112,11 +113,11 @@ function ChatBox() {
                     <ListGroup className='d-grid'>
                         {messages.map((msg, index) => (
                             <ListGroup.Item key={index} className={msg.type === 'user' ? 'user-message' : 'assistant-message'} style={{ borderRadius: '1.25em' }}>
-                                <strong>{msg.type === 'user' ? 'You:' : 'Assistant:'}</strong> {msg.text}
-                                {msg.isLoading && (
-                                    <Spinner animation="border" size="sm" />
-                                )}
-                                
+                                    <strong>{msg.type === 'user' ? 'You: ' : 'Assistant: '}</strong>
+                                    {msg.isLoading && (
+                                        <Spinner animation="border" size="sm"/>
+                                    )}
+                                    {msg.type === 'user' ? msg.text : !msg.isLoading && <div className='assistant-response' dangerouslySetInnerHTML={{ __html: marked.parse(msg.text) }}></div>}
                                 {msg.type === 'assistant' && msg.isPending && (
                                     <Container className="d-flex mt-2"> 
                                         <Button className='confirm-action-button'
@@ -153,7 +154,7 @@ function ChatBox() {
                             style={{ overflowY: 'auto' }}
                             onKeyDown={handleKeyDown}
                         />
-                        <Button type="submit" variant="primary">
+                        <Button type="submit" variant="primary" disabled={waitingReplyRef.current}>
                             <FaPaperPlane />
                         </Button>
                     </InputGroup>

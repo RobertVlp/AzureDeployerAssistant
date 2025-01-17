@@ -61,3 +61,21 @@
     background-color: #4b4b4b !important;
     color: #fff !important;
 }
+
+.assistant-response * {
+    margin-bottom: -15px;
+    max-width: 100%;
+}
+
+.assistant-response p {
+    margin-bottom: 0.25em !important;
+}
+
+.assistant-response ul, ol {
+    margin-top: -25px !important;
+}
+
+.assistant-response code {
+    background-color: #ededed;
+    color:#000000;
+}

@@ -31,6 +31,17 @@ class StorageAccountManager:
             return f"Storage account {storage_account_name} was deleted."
         except Exception as e:
             return f"Error deleting storage account: {str(e)}"
+        
+    def get_storage_account_info(self, resource_group_name, storage_account_name) -> str:
+        try:
+            storage_account = self.client.storage_accounts.get_properties(
+                resource_group_name,
+                storage_account_name
+            )
+
+            return str(storage_account.as_dict())
+        except Exception as e:
+            return f"Error getting storage account info: {str(e)}"
     
     def get_available_functions(self) -> dict:
         return {func: getattr(self, func) for func in dir(self) if callable(getattr(self, func)) and not func.startswith("__")}

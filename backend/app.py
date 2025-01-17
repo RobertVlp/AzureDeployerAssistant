@@ -108,9 +108,10 @@ class EventHandler(AssistantEventHandler):
 
 load_dotenv()
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+try:
+    client = OpenAI()
 
-if not client.api_key:
+except:
     logger.error("OpenAI API key not found in environment variables.")
     exit(1)
 
