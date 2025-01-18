@@ -7,22 +7,36 @@ class FunctionAppManager:
         self.subscription_id = subscription_id
         self.web_client = WebSiteManagementClient(credential, subscription_id)
 
-    def create_function_app(self, resource_group_name, storage_account_name, function_app_name, location, runtime_stack='PYTHON', runtime_version='3.8'):
+    def create_function_app(
+            self,
+            resource_group_name,
+            storage_account_name,
+            function_app_name, location,
+            hosting_plan='consumption', 
+            runtime_stack='PYTHON',
+            runtime_version='3.8'
+        ):
         storage_client = StorageManagementClient(self.credential, self.subscription_id)
+        hosting_plan = hosting_plan.strip().lower()
+
+        skuOptions = {
+            'elasticpremium': {'name': 'EP1', 'tier': 'ElasticPremium'},
+            'consumption': {'name': 'Y1', 'tier': 'Consumption'},
+            'basic': {'name': 'B1', 'tier': 'Basic'},
+            'standard': {'name': 'S1', 'tier': 'Standard'},
+            'premium': {'name': 'P1', 'tier': 'Premium'}
+        }
 
         try:
             storage_account = storage_client.storage_accounts.get_properties(resource_group_name, storage_account_name)
 
-            # Create an App Service Plan with Flex Consumption Plan
+            # Create an App Service Plan
             app_service_plan_async_operation = self.web_client.app_service_plans.begin_create_or_update(
                 resource_group_name,
                 f'{function_app_name}ServicePlan',
                 {
                     'location': location,
-                    'sku': {
-                        'name': 'EP1',
-                        'tier': 'ElasticPremium'
-                    },
+                    'sku': skuOptions[hosting_plan],
                     'kind': 'functionapp',
                     'reserved': True
                 }

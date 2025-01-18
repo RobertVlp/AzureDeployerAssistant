@@ -21,11 +21,17 @@
         "type": "string",
         "description": "The region where the function app is deployed."
       },
+      "hosting_plan": {
+        "type": "string",
+        "description": "The name of the hosting plan.",
+        "enum": ["Consumption", "Basic", "Standard", "Premium", "ElasticPremium"]
+      },
       "runtime_stack": {
         "type": "string",
-        "description": "The runtime stack of the function app."
+        "description": "The runtime stack of the function app.",
+        "enum": ["dotnet", "node", "java", "powershell", "python", "custom"]
       },
-      "version": {
+      "runtime_version": {
         "type": "string",
         "description": "The version of the runtime stack."
       }

@@ -90,8 +90,20 @@ function ChatBox() {
 
     useEffect(() => {
         if (textareaRef.current) {
-            textareaRef.current.style.height = 'auto';
-            textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 100)}px`;
+            const textarea = textareaRef.current;
+            const scrollPosition = window.scrollY;
+    
+            // Resize the textarea
+            textarea.style.height = 'auto';
+            textarea.style.height = `${Math.min(textarea.scrollHeight, 100)}px`;
+    
+            // Restore the scroll position to prevent jumps
+            if (window.scrollY !== scrollPosition) {
+                window.scrollTo({
+                    top: scrollPosition,
+                    behavior: 'instant',
+                });
+            }
         }
     }, [inputMessage]);
 
@@ -140,7 +152,7 @@ function ChatBox() {
                     </ListGroup>
                 </Container>
             </Row>
-            <Row className="justify-content-md-center">
+            <Row className="justify-content-md-center mb-3">
                 <Form onSubmit={handleSubmit} className="d-flex justify-content-center">
                     <InputGroup className="input-group-width">
                         <Form.Control

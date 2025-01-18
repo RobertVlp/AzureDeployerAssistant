@@ -1,150 +1,35 @@
 import os
-import json
 import logging
+
 from openai import OpenAI
 from flask_cors import CORS
 from dotenv import load_dotenv
-from typing_extensions import override
-from openai import AssistantEventHandler
+from helpers import create_assistant
+from eventHandler import EventHandler
 from assistant.Assistant import Assistant
-from flask import Flask, request, jsonify
 from azure.identity import DefaultAzureCredential
+from flask import Flask, Response, request, jsonify
 
 logging.basicConfig(level=logging.INFO)
 
 app = Flask(__name__)
-logger = logging.getLogger(__name__)
 app.config['CORS_HEADERS'] = 'Content-Type'
 CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
-
-class EventHandler(AssistantEventHandler):
-    def __init__(self):
-        super().__init__()
-        self.messages = []
-
-    @override
-    def on_event(self, event):
-        if event.event == 'thread.run.requires_action':
-            run_id = event.data.id
-            self.handle_requires_action(event.data, run_id)
-        elif event.event == 'thread.message.completed':
-            self.messages.append(event.data.content[0].text.value)
-
-    def handle_action(self, tool_calls):
-        tool_outputs = []
-        available_functions = deployer.get_available_functions()
-        
-        for tool in tool_calls:
-            if tool.function.name not in available_functions:
-                raise Exception("Function requested by the model does not exist.")
-            
-            logger.info(f"Calling function: {tool.function.name} with arguments: {tool.function.arguments}")
-
-            function_to_call = available_functions[tool.function.name]
-            tool_response = function_to_call(**json.loads(tool.function.arguments))
-            tool_outputs.append({"tool_call_id": tool.id, "output": tool_response})
-
-        return tool_outputs
-
-    def handle_requires_action(self, data, run_id):
-        tool_calls = []
-        pending_tool_calls = []
-        required_action_tool_calls = data.required_action.submit_tool_outputs.tool_calls
-
-        for tool_call in required_action_tool_calls:
-            if tool_call.function.name.startswith("create_") or tool_call.function.name.startswith("delete_"):
-                pending_tool_calls.append(tool_call)
-            else:
-                tool_calls.append(tool_call)
-
-        for tool in tool_calls:
-            tool_outputs = self.handle_action([tool])
-            self.messages.append(self.submit_tool_outputs(tool_outputs, run_id))
-
-        if len(pending_tool_calls) > 0:
-            pending_actions.append((run_id, self.current_run.thread_id, pending_tool_calls))
-            confirmation_message = "The following actions will be performed: \n"
-
-            for tool in pending_tool_calls:
-                confirmation_message += f"{tool.function.name} with arguments: {tool.function.arguments}\n"
-                
-            confirmation_message += "Do you want to proceed?\n"
-            self.messages.append(confirmation_message)
-
-    def execute_pending_actions(self, response):
-        run_id, thread_id, tool_calls = pending_actions.pop(0)
-
-        run = client.beta.threads.runs.retrieve(run_id=run_id, thread_id=thread_id)
-
-        if run.status == 'expired':
-            self.messages.append("The action has expired. Please try again.")
-            return
-
-        if response.strip().lower() == "yes":
-            tool_outputs = self.handle_action(tool_calls)
-            self.messages.append(self.submit_tool_outputs(tool_outputs, run_id, thread_id))
-        else:
-            self.messages.append("No actions were executed. Try again or provide more specific instructions.")
-            client.beta.threads.runs.cancel(run_id=run_id, thread_id=thread_id)
-
-            client.beta.threads.messages.create(
-                thread_id=thread_id,
-                role="assistant",
-                content="The action was cancelled."
-            )
-
-    def submit_tool_outputs(self, tool_outputs, run_id, thread_id=None):
-        eventHandler = EventHandler()
-
-        with client.beta.threads.runs.submit_tool_outputs_stream(
-            thread_id=self.current_run.thread_id if thread_id is None else thread_id,
-            run_id=run_id,
-            tool_outputs=tool_outputs,
-            event_handler=eventHandler,
-        ) as stream:
-            stream.until_done()
-
-        return eventHandler.messages
 
 load_dotenv()
 
 try:
     client = OpenAI()
-
 except:
-    logger.error("OpenAI API key not found in environment variables.")
+    logging.error("OpenAI API key not found in environment variables.")
     exit(1)
 
 assistant_id = os.getenv("ASSISTANT_ID")
-
-if not assistant_id:
-    try:
-        assistant = client.beta.assistants.create(
-            model="gpt-4o",
-            name="Azure Deployer Assistant",
-            temperature=0.7,
-            top_p=1,
-            instructions="You are assisting with resource deployment in Azure. Use the available functions to complete the task.",
-        )
-
-        files = os.listdir('assistant/functions')
-        functions = []
-
-        for file in files:
-            with open(f'assistant/functions/{file}', 'r') as f:
-                functions.append({"type": "function", "function": json.loads(f.read())})
-
-        client.beta.assistants.update(assistant.id, tools=functions)
-    except Exception as e:
-        logger.error(f"An error occurred while creating the assistant: {str(e)}")
-        exit(1)
-else:
-    assistant = client.beta.assistants.retrieve(assistant_id)
-
+assistant = create_assistant(client, assistant_id)
 subscription_id = os.getenv("AZURE_SUBSCRIPTION_ID")
 
 if not subscription_id:
-    logger.error("Azure subscription ID not found in environment variables.")
+    logging.error("Azure subscription ID not found in environment variables.")
     exit(1)
 
 # Authenticate with Azure
@@ -156,7 +41,7 @@ thread = client.beta.threads.create()
 pending_actions = []
 
 @app.after_request
-def after_request(response):
+def after_request(response: Response):
     response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
     response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST')
@@ -165,7 +50,7 @@ def after_request(response):
 
 @app.route('/send_message', methods=['POST'])
 def receive_message():
-    logger.info(f"Received request: {request.json}")
+    logging.info(f"Received request: {request.json}")
 
     data = request.json
     content = data.get('message')
@@ -176,7 +61,7 @@ def receive_message():
     try:
         # Cancel any pending actions if a confirmation message is not received
         if pending_actions:
-            logger.info(f"Cancelling pending actions: {pending_actions}")
+            logging.info(f"Cancelling pending actions: {pending_actions}")
 
             for run_id, thread_id, _ in pending_actions:
                 run = client.beta.threads.runs.retrieve(run_id=run_id, thread_id=thread_id)
@@ -192,7 +77,7 @@ def receive_message():
 
             pending_actions.clear()
 
-        event_handler = EventHandler()
+        event_handler = EventHandler(client, deployer, pending_actions)
 
         client.beta.threads.messages.create(
             thread_id=thread.id,
@@ -209,12 +94,13 @@ def receive_message():
 
         return jsonify({"response": event_handler.messages}), 200
     except Exception as e:
-        logger.error(f"An error occurred: {str(e)}")
+        logging.error(f"An error occurred: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/confirm_action', methods=['POST'])
 def confirm_action():
-    logger.info(f"Received request: {request.json}")
+    logging.info(f"Received request: {request.json}")
+    
     data = request.json
     response = data.get('message')
 
@@ -222,13 +108,13 @@ def confirm_action():
         return jsonify({"error": "No response provided"}), 400
 
     try:
-        event_handler = EventHandler()
+        event_handler = EventHandler(client, deployer, pending_actions)
         event_handler.execute_pending_actions(response)
 
         return jsonify({"response": event_handler.messages}), 200
     
     except Exception as e:
-        logger.error(f"An error occurred: {str(e)}")
+        logging.error(f"An error occurred: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':

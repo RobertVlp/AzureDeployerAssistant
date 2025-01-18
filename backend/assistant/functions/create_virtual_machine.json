@@ -1,0 +1,54 @@
+{
+    "name": "create_virtual_machine",
+    "description": "Create a virtual machine",
+    "strict": false,
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "resource_group_name": {
+                "type": "string",
+                "description": "The name of the resource group."
+            },
+            "vm_name": {
+                "type": "string",
+                "description": "The name of the virtual machine."
+            },
+            "location": {
+                "type": "string",
+                "description": "The region where the storage account is deployed."
+            },
+            "admin_username": {
+                "type": "string",
+                "description": "The name of the administrator account."
+            },
+            "admin_password": {
+                "type": "string",
+                "description": "The password of the administrator account."
+            },
+            "vm_size": {
+                "type": "string",
+                "description": "The size of the virtual machine (CPUs and memory)."
+            },
+            "publisher": {
+                "type": "string",
+                "description": "The name of the publisher of the image."
+            },
+            "offer": {
+                "type": "string",
+                "description": "The name of the offer of the image."
+            },
+            "sku": {
+                "type": "string",
+                "description": "The SKU of the image."
+            }
+        },
+        "required": [
+            "resource_group_name",
+            "vm_name",
+            "location",
+            "admin_username",
+            "admin_password"
+        ],
+        "additionalProperties": false
+    }
+}
