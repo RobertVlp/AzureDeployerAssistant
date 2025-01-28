@@ -100,7 +100,7 @@ def receive_message():
 @app.route('/confirm_action', methods=['POST'])
 def confirm_action():
     logging.info(f"Received request: {request.json}")
-    
+
     data = request.json
     response = data.get('message')
 
@@ -112,7 +112,6 @@ def confirm_action():
         event_handler.execute_pending_actions(response)
 
         return jsonify({"response": event_handler.messages}), 200
-    
     except Exception as e:
         logging.error(f"An error occurred: {str(e)}")
         return jsonify({"error": str(e)}), 500

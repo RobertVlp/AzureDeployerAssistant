@@ -25,6 +25,9 @@ def create_assistant(client: OpenAI, assistant_id):
                     functions.append({"type": "function", "function": json.loads(f.read())})
 
             client.beta.assistants.update(assistant.id, tools=functions)
+            
+            with open('.env', 'a') as f:
+                f.write(f"ASSISTANT_ID={assistant.id}\n")
         except Exception as e:
             logging.error(f"An error occurred while creating the assistant: {str(e)}")
             exit(1)

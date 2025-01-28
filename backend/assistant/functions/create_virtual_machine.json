@@ -15,11 +15,23 @@
             },
             "location": {
                 "type": "string",
-                "description": "The region where the storage account is deployed."
+                "description": "The region where the virtual machine is deployed."
             },
             "admin_username": {
                 "type": "string",
                 "description": "The name of the administrator account."
+            },
+            "authentication_type": {
+                "type": "string",
+                "description": "The type of authentication to use for the virtual machine. If ssh is selected, an ssh public key must be provided.",
+                "enum": [
+                    "password",
+                    "ssh"
+                ]
+            },
+            "ssh_public_key": {
+                "type": "string",
+                "description": "The ssh public key to use for authentication."
             },
             "admin_password": {
                 "type": "string",
@@ -47,7 +59,7 @@
             "vm_name",
             "location",
             "admin_username",
-            "admin_password"
+            "authentication_type"
         ],
         "additionalProperties": false
     }
