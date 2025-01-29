@@ -1,6 +1,6 @@
 {
-    "name": "delete_key_vault",
-    "description": "Delete a key vault.",
+    "name": "stop_virtual_machine",
+    "description": "Stops a virtual machine.",
     "strict": true,
     "parameters": {
       "type": "object",
@@ -9,15 +9,15 @@
           "type": "string",
           "description": "The name of the resource group."
         },
-        "key_vault_name": {
+        "vm_name": {
           "type": "string",
-          "description": "The name of the key vault."
+          "description": "The name of the virtual machine."
         }
       },
       "required": [
         "resource_group_name",
-        "key_vault_name"
+        "vm_name"
       ],
       "additionalProperties": false
     }
-  }
+}

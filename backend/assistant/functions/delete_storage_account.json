@@ -1,6 +1,6 @@
 {
     "name": "delete_storage_account",
-    "description": "Delete a storage account",
+    "description": "Delete a storage account.",
     "strict": true,
     "parameters": {
       "type": "object",

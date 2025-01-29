@@ -1,6 +1,6 @@
 {
     "name": "delete_function_app",
-    "description": "Delete a function app",
+    "description": "Delete a function app.",
     "strict": true,
     "parameters": {
       "type": "object",

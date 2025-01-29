@@ -1,6 +1,6 @@
 {
-    "name": "delete_key_vault",
-    "description": "Delete a key vault.",
+    "name": "get_redis_info",
+    "description": "Provides information about a Redis cache.",
     "strict": true,
     "parameters": {
       "type": "object",
@@ -9,15 +9,15 @@
           "type": "string",
           "description": "The name of the resource group."
         },
-        "key_vault_name": {
+        "redis_name": {
           "type": "string",
-          "description": "The name of the key vault."
+          "description": "The name of the Redis cache."
         }
       },
       "required": [
         "resource_group_name",
-        "key_vault_name"
+        "redis_name"
       ],
       "additionalProperties": false
     }
-  }
+}

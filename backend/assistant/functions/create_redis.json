@@ -1,0 +1,51 @@
+{
+  "name": "create_redis",
+  "description": "Create a Redis cache.",
+  "strict": false,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "resource_group_name": {
+        "type": "string",
+        "description": "The name of the resource group."
+      },
+      "redis_name": {
+        "type": "string",
+        "description": "The name of the Redis cache."
+      },
+      "location": {
+        "type": "string",
+        "description": "The location of the Redis cache."
+      },
+      "cache_size": {
+        "type": "integer",
+        "description": "The size of the Redis cache.",
+        "enun": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ]
+      },
+      "consumption_plan": {
+        "type": "string",
+        "description": "The consumption plan for the Redis cache.",
+        "enum": [
+          "Basic",
+          "Standard",
+          "Premium"
+        ]
+      }
+    },
+    "required": [
+      "resource_group_name",
+      "redis_name",
+      "location",
+      "cache_size"
+    ],
+    "additionalProperties": false
+  }
+}

@@ -3,11 +3,13 @@ import re
 from azure.mgmt.compute import ComputeManagementClient
 from azure.mgmt.network import NetworkManagementClient
 from azure.mgmt.compute.models import DiskCreateOptionTypes
+from assistant.network.NetworkManager import NetworkManager
 
 class VirtualMachineManager:
     def __init__(self, credential, subscription_id):
         self.subscription_id = subscription_id
         self.client = ComputeManagementClient(credential, subscription_id)
+        self.network_manager = NetworkManager(credential, subscription_id)
         self.network_client = NetworkManagementClient(credential, subscription_id)
 
     def create_virtual_machine(
@@ -36,14 +38,15 @@ class VirtualMachineManager:
 
         try:
             # Create virtual network
-            subnet = self.create_virtual_network(resource_group_name, f'{vm_name}VNet', location)
+            self.network_manager.create_virtual_network(resource_group_name, f'{vm_name}VNet', location)
+            # Create subnet
+            self.network_manager.create_subnet(resource_group_name, f'{vm_name}VNet', f'{vm_name}Subnet')
+            subnet = self.network_client.subnets.get(resource_group_name, f'{vm_name}VNet', f'{vm_name}Subnet')
 
             # Create public IP address
             public_ip_address = self.create_public_ip_address(resource_group_name, f'{vm_name}PublicIP', location)
-
             # Create network interface
             network_interface = self.create_network_interface(resource_group_name, f'{vm_name}NIC', location, subnet, public_ip_address)
-
             # Create virtual machine
             self.client.virtual_machines.begin_create_or_update(
                 resource_group_name,
@@ -99,46 +102,6 @@ class VirtualMachineManager:
             return f"Virtual machine {vm_name} created successfully."
         except Exception as e:
             return f"Error creating virtual machine: {str(e)}"
-        
-    def create_virtual_network(self, resource_group_name, vnet_name, location):
-        vmnets = self.network_client.virtual_networks.list(resource_group_name)
-        found = any(vnet.name == vnet_name for vnet in vmnets)
-
-        if not found:
-            self.network_client.virtual_networks.begin_create_or_update(
-                resource_group_name,
-                vnet_name,
-                {
-                    'location': location,
-                    'address_space': {
-                        'address_prefixes': ['10.0.0.0/16']
-                    },
-                }
-            ).result()
-
-            subnet = self.network_client.subnets.begin_create_or_update(
-                resource_group_name,
-                vnet_name,
-                f'{vnet_name}Subnet',
-                {'address_prefix': '10.0.0.0/24'}
-            ).result()
-
-            return subnet
-        else:
-            subnets = self.network_client.subnets.list(resource_group_name, vnet_name)
-            found = any(subnet.name == f'{vnet_name}Subnet' for subnet in subnets)
-
-            if not found:
-                subnet = self.network_client.subnets.begin_create_or_update(
-                    resource_group_name,
-                    vnet_name,
-                    f'{vnet_name}Subnet',
-                    {'address_prefix': '10.0.0.0/24'}
-                ).result()
-            else:
-                subnet = self.network_client.subnets.get(resource_group_name, vnet_name, f'{vnet_name}Subnet')
-
-            return subnet
 
     def create_public_ip_address(self, resource_group_name, pip_name, location):
         ip_addresses = self.network_client.public_ip_addresses.list(resource_group_name)
@@ -193,7 +156,7 @@ class VirtualMachineManager:
             # Remove the public IP address
             self.network_client.public_ip_addresses.begin_delete(resource_group_name, f'{vm_name}PublicIP').result()
             # Remove the virtual network
-            self.network_client.virtual_networks.begin_delete(resource_group_name, f'{vm_name}VNet').result()
+            self.network_manager.delete_virtual_network(resource_group_name, f'{vm_name}VNet')
             # Remove the disk
             self.client.disks.begin_delete(resource_group_name, f'{vm_name}OsDisk').result()
 
@@ -224,7 +187,7 @@ class VirtualMachineManager:
                 vm_name,
                 parameters={
                     'command_id': 'RunShellScript',
-                    'script': [instructions]
+                    'script': instructions.split('\n')
                 }
             ).result()
 

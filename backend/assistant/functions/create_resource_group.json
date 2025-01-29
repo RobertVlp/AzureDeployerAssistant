@@ -1,6 +1,6 @@
 {
     "name": "create_resource_group",
-    "description": "Create a resource group",
+    "description": "Create a resource group.",
     "strict": true,
     "parameters": {
       "type": "object",

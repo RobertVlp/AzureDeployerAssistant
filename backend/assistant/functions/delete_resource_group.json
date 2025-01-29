@@ -1,6 +1,6 @@
 {
     "name": "delete_resource_group",
-    "description": "Deletes a resource group",
+    "description": "Deletes a resource group.",
     "strict": true,
     "parameters": {
       "type": "object",

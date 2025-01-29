@@ -1,6 +1,6 @@
 {
-  "name": "create_storage_account",
-  "description": "Create a storage account.",
+  "name": "delete_blob_container",
+  "description": "Delete a blob container.",
   "strict": true,
   "parameters": {
     "type": "object",
@@ -13,15 +13,15 @@
         "type": "string",
         "description": "The name of the storage account."
       },
-      "location": {
+      "container_name": {
         "type": "string",
-        "description": "The region where the storage account is deployed."
+        "description": "The name of the blob container."
       }
     },
     "required": [
       "resource_group_name",
       "storage_account_name",
-      "location"
+      "container_name"
     ],
     "additionalProperties": false
   }

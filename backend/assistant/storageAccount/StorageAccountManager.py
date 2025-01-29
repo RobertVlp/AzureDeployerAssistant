@@ -12,7 +12,20 @@ class StorageAccountManager:
                 {
                     'sku': {'name': 'Standard_LRS'},
                     'kind': 'StorageV2',
-                    'location': location
+                    'location': location,
+                    'encryption': {
+                        'services': {
+                            'file': {
+                                'key_type': 'Account',
+                                'enabled': True
+                            },
+                            'blob': {
+                                'key_type': 'Account',
+                                'enabled': True
+                            }
+                        },
+                        'key_source': 'Microsoft.Storage'
+                    }
                 }
             )
 
@@ -31,6 +44,31 @@ class StorageAccountManager:
             return f"Storage account {storage_account_name} was deleted."
         except Exception as e:
             return f"Error deleting storage account: {str(e)}"
+        
+    def create_blob_container(self, resource_group_name, storage_account_name, container_name) -> str:
+        try:
+            self.client.blob_containers.create(
+                resource_group_name,
+                storage_account_name,
+                container_name,
+                {}
+            )
+
+            return f"Blob container {container_name} was created."
+        except Exception as e:
+            return f"Error creating blob container: {str(e)}"
+        
+    def delete_blob_container(self, resource_group_name, storage_account_name, container_name) -> str:
+        try:
+            self.client.blob_containers.delete(
+                resource_group_name,
+                storage_account_name,
+                container_name
+            )
+
+            return f"Blob container {container_name} was deleted."
+        except Exception as e:
+            return f"Error deleting blob container: {str(e)}"
         
     def get_storage_account_info(self, resource_group_name, storage_account_name) -> str:
         try:

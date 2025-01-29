@@ -1,6 +1,6 @@
 {
   "name": "create_function_app",
-  "description": "Create a function app",
+  "description": "Create a function app.",
   "strict": false,
   "parameters": {
     "type": "object",

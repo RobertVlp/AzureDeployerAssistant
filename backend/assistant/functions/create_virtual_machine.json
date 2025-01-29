@@ -1,6 +1,6 @@
 {
     "name": "create_virtual_machine",
-    "description": "Create a virtual machine",
+    "description": "Create a virtual machine.",
     "strict": false,
     "parameters": {
         "type": "object",

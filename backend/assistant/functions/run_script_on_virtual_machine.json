@@ -1,6 +1,6 @@
 {
-    "name": "delete_key_vault",
-    "description": "Delete a key vault.",
+    "name": "run_script_on_virtual_machine",
+    "description": "Runs a script on a virtual machine.",
     "strict": true,
     "parameters": {
       "type": "object",
@@ -9,15 +9,20 @@
           "type": "string",
           "description": "The name of the resource group."
         },
-        "key_vault_name": {
+        "vm_name": {
           "type": "string",
-          "description": "The name of the key vault."
+          "description": "The name of the virtual machine."
+        },
+        "script": {
+          "type": "string",
+          "description": "The script to run on the virtual machine."
         }
       },
       "required": [
         "resource_group_name",
-        "key_vault_name"
+        "vm_name",
+        "script"
       ],
       "additionalProperties": false
     }
-  }
+}

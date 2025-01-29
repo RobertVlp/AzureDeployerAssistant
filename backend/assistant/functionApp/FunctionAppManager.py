@@ -17,32 +17,12 @@ class FunctionAppManager:
             runtime_version='3.8'
         ):
         storage_client = StorageManagementClient(self.credential, self.subscription_id)
-        hosting_plan = hosting_plan.strip().lower()
-
-        skuOptions = {
-            'elasticpremium': {'name': 'EP1', 'tier': 'ElasticPremium'},
-            'consumption': {'name': 'Y1', 'tier': 'Consumption'},
-            'basic': {'name': 'B1', 'tier': 'Basic'},
-            'standard': {'name': 'S1', 'tier': 'Standard'},
-            'premium': {'name': 'P1', 'tier': 'Premium'}
-        }
 
         try:
             storage_account = storage_client.storage_accounts.get_properties(resource_group_name, storage_account_name)
 
             # Create an App Service Plan
-            app_service_plan_async_operation = self.web_client.app_service_plans.begin_create_or_update(
-                resource_group_name,
-                f'{function_app_name}ServicePlan',
-                {
-                    'location': location,
-                    'sku': skuOptions[hosting_plan],
-                    'kind': 'functionapp',
-                    'reserved': True
-                }
-            )
-
-            app_service_plan = app_service_plan_async_operation.result()
+            app_service_plan = self.create_app_service_plan(resource_group_name, f'{function_app_name}ServicePlan', location, hosting_plan)
         except Exception as e:
             return f"Error creating App Service Plan required for function app: {str(e)}"
 
@@ -76,6 +56,36 @@ class FunctionAppManager:
 
         except Exception as e:
             return f"Error creating Function App: {str(e)}"
+        
+    def create_app_service_plan(self, resource_group_name, app_service_plan_name, location, hosting_plan):
+        app_service_plans = self.web_client.app_service_plans.list_by_resource_group(resource_group_name)
+        found = any(plan.name == app_service_plan_name for plan in app_service_plans)
+
+        if not found:
+            hosting_plan = hosting_plan.strip().lower()
+
+            skuOptions = {
+                'elasticpremium': {'name': 'EP1', 'tier': 'ElasticPremium'},
+                'consumption': {'name': 'Y1', 'tier': 'Consumption'},
+                'basic': {'name': 'B1', 'tier': 'Basic'},
+                'standard': {'name': 'S1', 'tier': 'Standard'},
+                'premium': {'name': 'P1', 'tier': 'Premium'}
+            }
+
+            service_plan = self.web_client.app_service_plans.begin_create_or_update(
+                resource_group_name,
+                app_service_plan_name,
+                {
+                    'location': location,
+                    'sku': skuOptions[hosting_plan],
+                    'kind': 'functionapp',
+                    'reserved': True
+                }
+            ).result()
+
+            return service_plan
+        else:
+            return self.web_client.app_service_plans.get(resource_group_name, app_service_plan_name)
         
     def delete_function_app(self, resource_group_name, function_app_name):
         try:

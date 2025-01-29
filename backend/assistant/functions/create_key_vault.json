@@ -1,6 +1,6 @@
 {
   "name": "create_key_vault",
-  "description": "Create a key vault",
+  "description": "Create a key vault.",
   "strict": false,
   "parameters": {
     "type": "object",
