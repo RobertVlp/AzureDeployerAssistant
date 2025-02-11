@@ -1,6 +1,6 @@
 {
     "name": "get_storage_account_info",
-    "description": "Provides information about a storage account.",
+    "description": "Provide information about a storage account.",
     "strict": true,
     "parameters": {
       "type": "object",

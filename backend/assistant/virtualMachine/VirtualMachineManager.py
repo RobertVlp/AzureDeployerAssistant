@@ -180,18 +180,18 @@ class VirtualMachineManager:
         except Exception as e:
             return f"Error stopping virtual machine: {str(e)}"
         
-    def run_script_on_virtual_machine(self, resource_group_name, vm_name, instructions):
+    def run_script_on_virtual_machine(self, resource_group_name, vm_name, script):
         try:
             run_command = self.client.virtual_machines.begin_run_command(
                 resource_group_name,
                 vm_name,
                 parameters={
                     'command_id': 'RunShellScript',
-                    'script': instructions.split('\n')
+                    'script': script.split('\n')
                 }
             ).result()
 
-            res = '\n'.join([output.message for output in run_command.value])
+            res = '\n'.join([output.message for output in run_command.value if output.message is not None])
 
             return f"Action ran successfully. Output: {res}"
         except Exception as e:

@@ -1,6 +1,6 @@
 {
     "name": "get_key_vault_info",
-    "description": "Provides information about a key vault.",
+    "description": "Provide information about a key vault.",
     "strict": true,
     "parameters": {
       "type": "object",

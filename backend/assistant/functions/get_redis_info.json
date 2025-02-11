@@ -1,6 +1,6 @@
 {
     "name": "get_redis_info",
-    "description": "Provides information about a Redis cache.",
+    "description": "Provide information about a Redis cache.",
     "strict": true,
     "parameters": {
       "type": "object",

@@ -1,6 +1,6 @@
 {
     "name": "get_function_app_info",
-    "description": "Provides information about a function app.",
+    "description": "Provide information about a function app.",
     "strict": true,
     "parameters": {
       "type": "object",

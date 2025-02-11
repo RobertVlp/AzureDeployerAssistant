@@ -1,6 +1,6 @@
 {
     "name": "run_script_on_virtual_machine",
-    "description": "Runs a script on a virtual machine.",
+    "description": "Run a script on a virtual machine.",
     "strict": true,
     "parameters": {
       "type": "object",

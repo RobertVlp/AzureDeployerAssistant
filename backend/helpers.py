@@ -10,7 +10,7 @@ def create_assistant(client: OpenAI, assistant_id):
     if not assistant_id:
         try:
             assistant = client.beta.assistants.create(
-                model="gpt-4o",
+                model="gpt-4o-mini",
                 name="Azure Deployer Assistant",
                 temperature=0.7,
                 top_p=1,

@@ -1,6 +1,6 @@
 {
     "name": "start_virtual_machine",
-    "description": "Starts a virtual machine.",
+    "description": "Start a virtual machine.",
     "strict": true,
     "parameters": {
       "type": "object",

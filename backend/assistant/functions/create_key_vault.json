@@ -7,96 +7,26 @@
     "properties": {
       "resource_group_name": {
         "type": "string",
-        "description": "The name of the resource group."
+        "description": "The name of the resource group where the key vault will be created."
       },
       "key_vault_name": {
         "type": "string",
-        "description": "The name of the key vault."
+        "description": "The name of the key vault to create."
       },
       "location": {
         "type": "string",
-        "description": "The location where the key vault is deployed."
+        "description": "The Azure region where the key vault will be deployed (e.g., 'eastus', 'westeurope')."
       },
-      "tenantId": {
+      "tenant_id": {
         "type": "string",
-        "description": "The id of the tennant for which access policies are defined."
-      },
-      "access_policies": {
-        "type": "array",
-        "description": "Access policies for the key vault.",
-        "items": {
-          "type": "object",
-          "properties": {
-            "object_id": {
-              "type": "string",
-              "description": "The id for which the access policy is defined."
-            },
-            "permissions": {
-              "type": "object",
-              "properties": {
-                "keys": {
-                  "type": "array",
-                  "items": {
-                    "type": "string",
-                    "enum": [
-                      "get",
-                      "list",
-                      "create",
-                      "delete",
-                      "update",
-                      "import",
-                      "backup",
-                      "restore",
-                      "recover",
-                      "purge"
-                    ]
-                  }
-                },
-                "secrets": {
-                  "type": "array",
-                  "items": {
-                    "type": "string",
-                    "enum": [
-                      "get",
-                      "list",
-                      "set",
-                      "delete",
-                      "backup",
-                      "restore",
-                      "recover",
-                      "purge"
-                    ]
-                  }
-                },
-                "certificates": {
-                  "type": "array",
-                  "items": {
-                    "type": "string",
-                    "enum": [
-                      "get",
-                      "list",
-                      "set",
-                      "delete",
-                      "backup",
-                      "restore",
-                      "recover",
-                      "purge"
-                    ]
-                  }
-                }
-              },
-              "additionalProperties": false
-            },
-            "additionalProperties": false
-          }
-        },
-        "additionalProperties": false
+        "description": "The ID of the Azure Active Directory tenant associated with the key vault."
       }
     },
     "required": [
       "resource_group_name",
       "key_vault_name",
       "location"
-    ]
+    ],
+    "additionalProperties": false
   }
 }

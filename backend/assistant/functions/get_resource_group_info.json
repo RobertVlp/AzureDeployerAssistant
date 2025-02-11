@@ -1,6 +1,6 @@
 {
     "name": "get_resource_group_info",
-    "description": "Provides information about a resource group: name, location, tags, and resources.",
+    "description": "Provide information about a resource group: name, location, tags, and resources.",
     "strict": true,
     "parameters": {
       "type": "object",

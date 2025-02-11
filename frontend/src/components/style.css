@@ -1,19 +1,75 @@
+#root {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+#root > div {
+    min-height: 100vh;
+    flex: 1;
+}
+
+.chat-interface {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 1px 0 20px 0; /* Added padding-bottom */
+}
+
 .chat-box {
-    height: 75vh;
-    max-height: 75vh;
-    border: 1px solid #ccc;
+    height: 85vh;
+    max-height: 85vh;
+    border: 2px solid #ccc;
     border-radius: 5px;
-    overflow-y: scroll;
     margin: 20px 20px;
     padding: 10px;
-    background-color: #f9f9f9;
     align-self: center;
     overflow-x: hidden;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.messages-container {
+    flex-grow: 1;
+    overflow-x: hidden;
+    overflow-y: auto;
+    margin-bottom: 10px;
+    scroll-behavior: smooth;
+    padding-right: 5px; /* Add some padding for the scrollbar */
+}
+
+/* Style the scrollbar for WebKit browsers */
+.messages-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+messages-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.messages-container::-webkit-scrollbar-thumb {
+    background-color: #888;
+    border-radius: 4px;
+}
+
+.dark-mode .messages-container::-webkit-scrollbar-thumb {
+    background-color: #555;
+}
+
+.chat-input-container {
+    border-top: 2px solid #ccc;
+    padding-top: 10px;
+}
+
+.dark-mode .chat-input-container {
+    border-top-color: #303030;
 }
 
 .input-group-width {
     width: 60%;
     max-width: 600px;
+    margin-bottom: 8px;
 }
 
 .user-message, .assistant-message {
@@ -21,6 +77,7 @@
     word-wrap: break-word;
     white-space: pre-wrap;
     max-width: 50%;
+    border-top-width: thin !important;
 }
 
 .user-message {
@@ -41,7 +98,7 @@
 
 .page-heading {
     font-size: 2.5rem;
-    color: #006ee3;
+    color: 'dark';
     text-align: center;
     margin-top: 20px;
     margin-bottom: 20px;
@@ -78,4 +135,104 @@
 .assistant-response code {
     background-color: #ededed;
     color:#000000;
+}
+
+.dark-mode {
+    background-color: rgb(17 24 39 / var(--tw-bg-opacity, 1));
+    color: #ffffff;
+    margin: 0;
+    padding: 0;
+}
+
+.dark-mode .chat-box {
+    background-color: #181818;
+    border-color: #303030;
+}
+
+.dark-mode .user-message {
+    background-color: #314f6e !important;
+    color: #ffffff !important;
+}
+
+.dark-mode .assistant-message {
+    background-color: #2a2a2a !important;
+    color: #ffffff !important;
+}
+
+.dark-mode .page-heading {
+    color: #ffffff;
+}
+
+.dark-mode .input-group textarea {
+    background-color: #181818;
+    color: #ffffff;
+    border-color: #303030;
+}
+
+.dark-mode .input-group textarea::placeholder {
+    color: #ffffff;
+}
+
+.input-group-width .form-control:focus {
+    border-color: #4b4b4b;
+    box-shadow: 0 0 0 0.2rem rgba(75, 75, 75, 0.25);
+}
+
+.dark-mode .input-group-width .form-control:focus {
+    border-color: #6c757d;
+    box-shadow: 0 0 0 0.2rem rgba(108, 117, 125, 0.25);
+    background-color: #181818;
+    color: #ffffff;
+}
+
+.dark-mode .assistant-response code {
+    background-color: #2a2a2a;
+    color: #ffffff;
+}
+
+.dark-mode .confirm-action-button {
+    background-color: #2a2a2a !important;
+    border-color: #6c6c6c !important;
+    color: #ffffff !important;
+}
+
+.dark-mode .confirm-action-button:hover {
+    background-color: #575757 !important;
+}
+
+.theme-toggle-button {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    border: none;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.theme-toggle-button:hover {
+    transform: scale(1.1);
+    transition: transform 0.2s ease;
+}
+
+.dark-mode .theme-toggle-button {
+    background-color: #2a2a2a;
+    color: #ffd700;
+    border: 1px solid #404040;
+}
+
+.dark-mode .theme-toggle-button:hover {
+    background-color: #3a3a3a;
+}
+
+/* Add smooth transition for theme switching */
+body, .chat-box, .user-message, .assistant-message, 
+.input-group textarea, .theme-toggle-button {
+    transition: background-color 0.3s ease, color 0.3s ease;
 }

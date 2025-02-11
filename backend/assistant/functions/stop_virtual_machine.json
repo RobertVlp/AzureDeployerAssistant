@@ -1,6 +1,6 @@
 {
     "name": "stop_virtual_machine",
-    "description": "Stops a virtual machine.",
+    "description": "Stop a virtual machine.",
     "strict": true,
     "parameters": {
       "type": "object",

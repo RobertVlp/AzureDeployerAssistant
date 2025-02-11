@@ -1,6 +1,6 @@
 {
     "name": "delete_virtual_machine",
-    "description": "Provides information about a virtual machine.",
+    "description": "Delete a virtual machine.",
     "strict": true,
     "parameters": {
         "type": "object",

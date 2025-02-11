@@ -4,13 +4,10 @@ import './style.css';
 
 const ChatInterface = () => {
     return (
-        <>
-            <div className="App">
-                <h1 className="page-heading">Azure Deployer Assistant</h1>
-            </div>
-        
+        <div className="chat-interface">
+            <h1 className="page-heading">Cloud Resource AI Bot</h1>
             <ChatBox/>
-        </>
+        </div>
     );
 }
 
