@@ -1,4 +1,5 @@
 using AIAssistant.Assistants;
+using AIAssistant.Middleware;
 using AIAssistant.Models;
 using Microsoft.Azure.Functions.Worker.Builder;
 using Microsoft.Extensions.DependencyInjection;
@@ -6,9 +7,11 @@ using Microsoft.Extensions.Hosting;
 using OpenAI.Assistants;
 using Newtonsoft.Json.Linq;
 
-var builder = FunctionsApplication.CreateBuilder(args);
-
-builder.ConfigureFunctionsWebApplication();
+var builder = Host.CreateDefaultBuilder(args)
+    .ConfigureFunctionsWebApplication(app =>
+    {
+        app.UseMiddleware<CorsMiddleware>();
+    });
 
 var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") 
     ?? throw new InvalidOperationException("OPENAI_API_KEY is not set.");
@@ -54,7 +57,10 @@ if (Environment.GetEnvironmentVariable("ASSISTANT_ID") is null)
 }
 
 // Register services
-builder.Services.AddSingleton<IAssistant, OpenAIAssistant>();
+builder.ConfigureServices(services =>
+{
+    services.AddSingleton<IAssistant, OpenAIAssistant>();
+});
 
 // Application Insights isn't enabled by default. See https://aka.ms/AAt8mw4.
 // builder.Services
