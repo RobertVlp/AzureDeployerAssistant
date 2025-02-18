@@ -13,10 +13,10 @@ namespace AIAssistant
         private readonly ILogger<AIAssistant> _logger = logger;
         private readonly IAssistant _assistant = assistant;
 
-        [Function("Thread")]
-        public async Task<ContentResult> ThreadAsync([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequest req)
+        [Function("CreateThread")]
+        public async Task<ContentResult> CreateThreadAsync([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequest req)
         {
-            _logger.LogInformation("New thread request received.");
+            _logger.LogInformation("Creating a new thread.");
 
             try
             {
@@ -29,6 +29,13 @@ namespace AIAssistant
                 string error = $"Failed to create a new thread: {ex.Message}";
                 return CreateResponse(HttpStatusCode.BadRequest, JsonSerializer.Serialize(new { error }));
             }
+        }
+
+        [Function("DeleteThread")]
+        public async Task<ContentResult> DeleteThreadAsync([HttpTrigger(AuthorizationLevel.Anonymous, "delete")] HttpRequest req)
+        {
+            _logger.LogInformation("Deleting an existing thread.");
+            return await RunAssistantAsync(req, _assistant.DeleteThreadAsync);
         }
 
         [Function("InvokeAssistant")]

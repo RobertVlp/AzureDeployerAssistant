@@ -31,9 +31,17 @@ namespace AIAssistant.Assistants
             return thread.Id;
         }
 
+        public async Task<List<string>> DeleteThreadAsync(AssistantRequest request)
+        {
+            (string threadId, _) = request;
+            await CancelPendingActions(threadId);
+            await _client.DeleteThreadAsync(threadId);
+
+            return [$"The thread with id {threadId} has been deleted."];
+        }
+
         private async Task<List<string>> HandleStreamingUpdatesAsync(AsyncCollectionResult<StreamingUpdate> updates)
         {
-            List<string> responses = [];
             StringBuilder response = new();
             Queue<RequiredActionUpdate> pendingRequests = [];
             ThreadRun? currentRun;
@@ -91,7 +99,7 @@ namespace AIAssistant.Assistants
                             );
                             outputs.Add(new ToolOutput(action.ToolCallId, output));
                         }
-                        
+
                         allActions.Clear();
                         updates = _client.SubmitToolOutputsToRunStreamingAsync(
                             currentRun.ThreadId,
@@ -106,6 +114,13 @@ namespace AIAssistant.Assistants
                 }
             }
             while (currentRun?.Status.IsTerminal == false);
+
+            return BuildResponse(response, pendingRequests, currentRun);
+        }
+
+        private List<string> BuildResponse(StringBuilder response, Queue<RequiredActionUpdate> pendingRequests, ThreadRun? currentRun)
+        {
+            List<string> responses = [];
 
             if (!string.IsNullOrEmpty(response.ToString()))
             {
