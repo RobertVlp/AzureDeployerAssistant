@@ -13,7 +13,7 @@
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    padding: 1px 0 20px 0; /* Added padding-bottom */
+    padding: 1px 0 16px 0;
 }
 
 .chat-box {
@@ -80,7 +80,7 @@ messages-container::-webkit-scrollbar-track {
 }
 
 .user-message {
-    background-color: rgb(59 130 246 / var(--tw-bg-opacity, 1)) !important;
+    background-color: #009be3 !important;
     justify-self: right;
 }
 
@@ -236,11 +236,10 @@ body, .chat-box, .user-message, .assistant-message,
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Chat sidebar styles */
 .chat-layout {
     display: flex;
     width: 100%;
-    min-height: 100vh;
+    min-height: 85vh;
 }
 
 .chat-sidebar {
@@ -249,6 +248,7 @@ body, .chat-box, .user-message, .assistant-message,
     display: flex;
     flex-direction: column;
     padding: 20px;
+    max-height: 85vh;
 }
 
 .dark-mode .chat-sidebar {
@@ -310,6 +310,9 @@ body, .chat-box, .user-message, .assistant-message,
     border: 1px solid #ccc;
     background-color: #fff;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .new-chat-btn:hover {
@@ -326,13 +329,6 @@ body, .chat-box, .user-message, .assistant-message,
     background-color: #3a3a3a;
 }
 
-/* Adjust existing chat container */
 .chat-container-main {
     flex: 1;
-}
-
-/* Update existing chat-box class */
-.chat-box {
-    height: 85vh;
-    margin: 20px;
 }

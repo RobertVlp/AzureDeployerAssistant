@@ -1,10 +1,10 @@
 import { Container, Row, Form, Button, InputGroup, ListGroup, Spinner } from 'react-bootstrap';
 import React, { useState, useEffect, useRef, useContext } from 'react';
-import { FaPaperPlane, FaTrash } from 'react-icons/fa';
+import { FaPaperPlane, FaTrash, FaPlus } from 'react-icons/fa';
 import { BsMoonFill, BsSunFill } from 'react-icons/bs';
+import { ThemeContext } from '../App';
 import { marked } from 'marked';
 import './style.css';
-import { ThemeContext } from '../App';
 
 function ChatBox() {
     const { darkMode, setDarkMode } = useContext(ThemeContext);
@@ -13,11 +13,10 @@ function ChatBox() {
     const chatContainerRef = useRef(null);
     const textareaRef = useRef(null);
     const waitingReplyRef = useRef(false);
-    const [chats, setChats] = useState([]);
+    const [chats, setChats] = useState({});  // Changed to object/dictionary
     const [currentThreadId, setCurrentThreadId] = useState(null);
 
     const createThread = async () => {
-        console.log(chats);
         try {
             const response = await fetch(' http://localhost:7151/api/CreateThread');
             if (!response.ok) throw new Error(response.status + response.statusText);
@@ -42,45 +41,69 @@ function ChatBox() {
 
     const createNewChat = async () => {
         const threadId = await createThread();
-        setChats([...chats, { threadId: threadId, messages: [] }]);
-        setCurrentThreadId(threadId);
+        setChats(prevChats => ({
+            ...prevChats,
+            [threadId]: []
+        }));
+        selectChat(threadId);
     };
 
     const deleteChat = async (threadId) => {
         await deleteThread(threadId);
-        setChats(chats.filter(chat => chat.threadId !== threadId));
-        
-        if (currentThreadId === threadId) {
-            setCurrentThreadId(null);
-            setMessages([]);
-        }
+        setChats(prevChats => {
+            const { [threadId]: removed, ...remaining } = prevChats;
+            
+            if (threadId === currentThreadId) {
+                const remainingThreads = Object.keys(remaining);
+                setTimeout(() => {
+                    selectChat(remainingThreads[0]);
+                }, 0);
+            }
+            
+            return remaining;
+        });
     };
 
     const selectChat = (threadId) => {
-        console.log('Selected chat:', threadId);
         setCurrentThreadId(threadId);
-        const selectedChat = chats.find(chat => chat.threadId === threadId);
-
-        if (selectedChat) {
-            setMessages(selectedChat.messages);
-        } else {
-            setMessages([]);
-        }
+        setMessages(chats[threadId] || []);
     };
 
     useEffect(() => {
-        if (chats.length === 0) {
-            createNewChat();
-        }
+        let isMounted = true;
+
+        const initializeChat = async () => {
+            if (Object.keys(chats).length === 0) {
+                const threadId = await createThread();
+                if (isMounted) {
+                    setChats(prevChats => {
+                        // Only create a new chat if there are no chats
+                        if (Object.keys(prevChats).length === 0) {
+                            const newChats = { [threadId]: [] };
+                            setCurrentThreadId(threadId);
+                            return newChats;
+                        }
+                        return prevChats;
+                    });
+                }
+            }
+        };
+
+        initializeChat();
+
+        return () => {
+            isMounted = false;
+        };
     });
 
     useEffect(() => {
-        const currentChat = chats.find(chat => chat.threadId === currentThreadId);
-        if (currentChat && currentChat.messages !== messages) {
-            currentChat.messages = messages;
-            setChats([...chats]);
+        if (currentThreadId && messages.length > 0) {
+            setChats(prevChats => ({
+                ...prevChats,
+                [currentThreadId]: [...messages]
+            }));
         }
-    }, [messages, chats, currentThreadId]);
+    }, [messages, currentThreadId]);
 
     const scrollToBottom = () => {
         if (chatContainerRef.current) {
@@ -218,20 +241,21 @@ function ChatBox() {
             <div className="chat-layout">
                 <div className="chat-sidebar">
                     <button className="new-chat-btn" onClick={createNewChat}>
+                        <FaPlus style={{ marginRight: '8px' }} />
                         New Chat
                     </button>
                     <div className="chat-list">
-                        {chats.map((chat) => (
+                        {Object.entries(chats).map(([threadId, _]) => (
                             <div 
-                                key={chat.threadId} 
-                                className={`chat-item ${chat.threadId === currentThreadId ? 'active' : ''}`}
-                                onClick={() => selectChat(chat.threadId)}
+                                key={threadId} 
+                                className={`chat-item ${threadId === currentThreadId ? 'active' : ''}`}
+                                onClick={() => selectChat(threadId)}
                             >
-                                <span>Chat {chat.threadId.substring(0, 8)}...</span>
-                                {chats.length > 1 &&
+                                <span>Chat {threadId.substring(0, 8)}...</span>
+                                {Object.keys(chats).length > 1 &&
                                     <div 
                                         className="delete-chat-btn" 
-                                        onClick={(e) => handleDeleteChat(e, chat.threadId)}
+                                        onClick={(e) => handleDeleteChat(e, threadId)}
                                     >
                                         <FaTrash />
                                     </div>
