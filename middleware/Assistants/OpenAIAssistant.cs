@@ -16,6 +16,8 @@ namespace AIAssistant.Assistants
         private readonly AssistantClient _client;
         private readonly Assistant _assistant;
         private readonly Dictionary<string, (string, Queue<RequiredActionUpdate>)> _pendingRequests;
+        private readonly HashSet<string> _activeThreads;
+        private static readonly JsonSerializerOptions _jsonSerializerOptions = new() { WriteIndented = true };
 
         public OpenAIAssistant(ILogger<IAssistant> logger)
         {
@@ -23,18 +25,21 @@ namespace AIAssistant.Assistants
             _client = new(Environment.GetEnvironmentVariable("OPENAI_API_KEY"));
             _assistant = _client.GetAssistant(Environment.GetEnvironmentVariable("ASSISTANT_ID"));
             _pendingRequests = [];
+            _activeThreads = [];
         }
 
         public async Task<string> CreateThreadAsync()
         {
             AssistantThread thread = await _client.CreateThreadAsync();
+            _activeThreads.Add(thread.Id);
             return thread.Id;
         }
 
         public async Task<List<string>> DeleteThreadAsync(AssistantRequest request)
         {
             (string threadId, _) = request;
-            await CancelPendingActions(threadId);
+            _activeThreads.Remove(threadId);
+            await CancelPendingActionsAsync(threadId);
             await _client.DeleteThreadAsync(threadId);
 
             return [$"The thread with id {threadId} has been deleted."];
@@ -42,80 +47,104 @@ namespace AIAssistant.Assistants
 
         private async Task<List<string>> HandleStreamingUpdatesAsync(AsyncCollectionResult<StreamingUpdate> updates)
         {
+            if (updates == null)
+            {
+                return [];
+            }
+            
             StringBuilder response = new();
             Queue<RequiredActionUpdate> pendingRequests = [];
             ThreadRun? currentRun;
             List<RequiredActionUpdate> allActions = [];
             bool hasConfirmationActions = false;
 
-            do
+            try
             {
-                currentRun = null;
-                List<ToolOutput> outputs = [];
-
-                await foreach (StreamingUpdate update in updates)
+                do
                 {
-                    switch (update)
+                    currentRun = null;
+                    List<ToolOutput> outputs = [];
+
+                    await foreach (StreamingUpdate update in updates)
                     {
-                        case RequiredActionUpdate requiredActionUpdate:
-                            string functionName = requiredActionUpdate.FunctionName;
-                            allActions.Add(requiredActionUpdate);
+                        if (update == null)
+                        {
+                            continue;
+                        }
 
-                            if (functionName.StartsWith("create") || functionName.StartsWith("delete"))
-                            {
-                                hasConfirmationActions = true;
-                            }
-                            break;
+                        switch (update)
+                        {
+                            case RequiredActionUpdate requiredActionUpdate:
+                                string functionName = requiredActionUpdate.FunctionName;
+                                allActions.Add(requiredActionUpdate);
 
-                        case RunUpdate runUpdate:
-                            currentRun = runUpdate;
-                            break;
+                                if (functionName.StartsWith("create") || functionName.StartsWith("delete"))
+                                {
+                                    hasConfirmationActions = true;
+                                }
+                                break;
 
-                        case MessageContentUpdate messageContentUpdate:
-                            response.Append(messageContentUpdate.Text);
-                            break;
+                            case RunUpdate runUpdate:
+                                currentRun = runUpdate;
+                                break;
 
-                        default:
-                            break;
+                            case MessageContentUpdate messageContentUpdate:
+                                response.Append(messageContentUpdate.Text);
+                                break;
+
+                            default:
+                                break;
+                        }
                     }
-                }
 
-                if (currentRun != null && allActions.Count > 0)
-                {
-                    if (hasConfirmationActions)
+                    if (currentRun != null && allActions.Count > 0)
                     {
-                        // If there are any confirmation actions, all actions need to wait for confirmation
-                        allActions.ForEach(pendingRequests.Enqueue);
-                        break;
+                        if (hasConfirmationActions)
+                        {
+                            // If there are any confirmation actions, all actions need to wait for confirmation
+                            allActions.ForEach(pendingRequests.Enqueue);
+                            break;
+                        }
+                        else
+                        {
+                            // If no confirmation actions, process all actions immediately
+                            foreach (var action in allActions)
+                            {
+                                string output = await CallToolAsync(
+                                    action.FunctionName,
+                                    action.FunctionArguments
+                                );
+                                outputs.Add(new ToolOutput(action.ToolCallId, output));
+                            }
+
+                            allActions.Clear();
+                            
+                            if (!_activeThreads.Contains(currentRun.ThreadId))
+                            {
+                                break;
+                            }
+
+                            updates = _client.SubmitToolOutputsToRunStreamingAsync(
+                                currentRun.ThreadId,
+                                currentRun.Id,
+                                outputs
+                            );
+                        }
                     }
                     else
                     {
-                        // If no confirmation actions, process all actions immediately
-                        foreach (var action in allActions)
-                        {
-                            string output = await CallToolAsync(
-                                action.FunctionName,
-                                action.FunctionArguments
-                            );
-                            outputs.Add(new ToolOutput(action.ToolCallId, output));
-                        }
-
-                        allActions.Clear();
-                        updates = _client.SubmitToolOutputsToRunStreamingAsync(
-                            currentRun.ThreadId,
-                            currentRun.Id,
-                            outputs
-                        );
+                        break;
                     }
                 }
-                else
-                {
-                    break;
-                }
-            }
-            while (currentRun?.Status.IsTerminal == false);
+                while (currentRun?.Status.IsTerminal == false);
 
-            return BuildResponse(response, pendingRequests, currentRun);
+                return BuildResponse(response, pendingRequests, currentRun);
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogWarning("Request timed out.");
+                return ["The request timed out. Please try again."];
+            }
         }
 
         private List<string> BuildResponse(StringBuilder response, Queue<RequiredActionUpdate> pendingRequests, ThreadRun? currentRun)
@@ -136,7 +165,11 @@ namespace AIAssistant.Assistants
 
                 foreach (RequiredActionUpdate action in pendingRequests)
                 {
-                    builder.Append($"{action.FunctionName} with arguments: {action.FunctionArguments}\n");
+                    string functionArguments = JsonSerializer.Serialize(
+                        JsonSerializer.Deserialize<object>(action.FunctionArguments),
+                        _jsonSerializerOptions
+                    );
+                    builder.Append($"{action.FunctionName} with arguments:\n{functionArguments}\n");
                 }
 
                 builder.Append("Do you want to proceed?");
@@ -149,7 +182,7 @@ namespace AIAssistant.Assistants
         public async Task<List<string>> ProcessRequestAsync(AssistantRequest request)
         {
             (string threadId, string prompt) = request;
-            await CancelPendingActions(threadId);
+            await CancelPendingActionsAsync(threadId);
 
             await _client.CreateMessageAsync(threadId, MessageRole.User, [prompt]);
 
@@ -185,18 +218,23 @@ namespace AIAssistant.Assistants
                 
                 _pendingRequests.Remove(threadId);
 
+                if (!_activeThreads.Contains(threadId))
+                {
+                    return ["The thread has been deleted."];
+                }
+
                 return await HandleStreamingUpdatesAsync(
                     _client.SubmitToolOutputsToRunStreamingAsync(threadId, runId, outputs)
                 );
             }
             else
             {
-                await CancelPendingActions(threadId);
+                await CancelPendingActionsAsync(threadId);
                 return ["No actions were executed. Try again or provide more specific instructions."];
             }
         }
 
-        private async Task CancelPendingActions(string threadId)
+        private async Task CancelPendingActionsAsync(string threadId)
         {
             if (_pendingRequests.TryGetValue(threadId, out (string, Queue<RequiredActionUpdate>) value))
             {

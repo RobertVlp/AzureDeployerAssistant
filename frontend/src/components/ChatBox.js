@@ -10,13 +10,13 @@ function ChatBox() {
     const { darkMode, setDarkMode } = useContext(ThemeContext);
     const [messages, setMessages] = useState([]);
     const [inputMessage, setInputMessage] = useState('');
+    const [chats, setChats] = useState({});
     const chatContainerRef = useRef(null);
     const textareaRef = useRef(null);
-    const waitingReplyRef = useRef(false);
-    const [chats, setChats] = useState({});  // Changed to object/dictionary
-    const [currentThreadId, setCurrentThreadId] = useState(null);
+    const waitingReplyRef = useRef({});
+    const activeThreadRef = useRef(null);
 
-    const createThread = async () => {
+    const createThreadAsync = async () => {
         try {
             const response = await fetch(' http://localhost:7151/api/CreateThread');
             if (!response.ok) throw new Error(response.status + response.statusText);
@@ -27,7 +27,7 @@ function ChatBox() {
         }
     };
 
-    const deleteThread = async (threadId) => {
+    const deleteThreadAsync = async (threadId) => {
         try {
             await fetch(`http://localhost:7151/api/DeleteThread`, {
                 method: 'DELETE',
@@ -39,8 +39,8 @@ function ChatBox() {
         }
     };
 
-    const createNewChat = async () => {
-        const threadId = await createThread();
+    const createNewChatAsync = async () => {
+        const threadId = await createThreadAsync();
         setChats(prevChats => ({
             ...prevChats,
             [threadId]: []
@@ -48,13 +48,13 @@ function ChatBox() {
         selectChat(threadId);
     };
 
-    const deleteChat = async (threadId) => {
-        await deleteThread(threadId);
+    const deleteChatAsync = async (threadId) => {
         setChats(prevChats => {
             const { [threadId]: removed, ...remaining } = prevChats;
             
-            if (threadId === currentThreadId) {
+            if (threadId === activeThreadRef.current) {
                 const remainingThreads = Object.keys(remaining);
+                activeThreadRef.current = remainingThreads[0];
                 setTimeout(() => {
                     selectChat(remainingThreads[0]);
                 }, 0);
@@ -62,10 +62,12 @@ function ChatBox() {
             
             return remaining;
         });
+
+        await deleteThreadAsync(threadId);
     };
 
     const selectChat = (threadId) => {
-        setCurrentThreadId(threadId);
+        activeThreadRef.current = threadId;
         setMessages(chats[threadId] || []);
     };
 
@@ -74,13 +76,14 @@ function ChatBox() {
 
         const initializeChat = async () => {
             if (Object.keys(chats).length === 0) {
-                const threadId = await createThread();
+                const threadId = await createThreadAsync();
                 if (isMounted) {
                     setChats(prevChats => {
                         // Only create a new chat if there are no chats
                         if (Object.keys(prevChats).length === 0) {
                             const newChats = { [threadId]: [] };
-                            setCurrentThreadId(threadId);
+                            activeThreadRef.current = threadId;
+                
                             return newChats;
                         }
                         return prevChats;
@@ -97,13 +100,13 @@ function ChatBox() {
     });
 
     useEffect(() => {
-        if (currentThreadId && messages.length > 0) {
+        if (activeThreadRef.current && messages.length > 0) {
             setChats(prevChats => ({
                 ...prevChats,
-                [currentThreadId]: [...messages]
+                [activeThreadRef.current]: [...messages]
             }));
         }
-    }, [messages, currentThreadId]);
+    }, [messages]);
 
     const scrollToBottom = () => {
         if (chatContainerRef.current) {
@@ -115,18 +118,42 @@ function ChatBox() {
         }
     };
 
-    const handleAction = async (action, url) => {
-        const tempMessage = { text: '', type: 'assistant', isLoading: true };
+    const updateMessages = (newMessages, threadId) => {
+        setChats(prevChats => {
+            const targetChat = prevChats[threadId];
 
+            if (!targetChat) {
+                return prevChats;
+            }
+            
+            const filteredMessages = targetChat.filter(msg => !msg.isLoading);
+            
+            return {
+                ...prevChats,
+                [threadId]: [...filteredMessages, ...newMessages]
+            };
+        });
+
+        if (threadId === activeThreadRef.current) {
+            setMessages(prevMessages => {
+                const filteredMessages = prevMessages.filter(msg => !msg.isLoading);
+                return [...filteredMessages, ...newMessages];
+            });
+        }
+    };
+
+    const handleActionAsync = async (action, url, threadId) => {
         try {
-            setMessages((prevMessages) => [...prevMessages, tempMessage]);
-            waitingReplyRef.current = true;
+            const tempMessage = { text: '', type: 'assistant', isLoading: true };
+            setMessages(prev => [...prev, tempMessage]);
+
+            waitingReplyRef.current[threadId] = true;
 
             const response = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
-                    threadId: currentThreadId,
+                    threadId: threadId,
                     prompt: action 
                 })
             });
@@ -134,66 +161,49 @@ function ChatBox() {
             if (!response.ok) throw new Error(response.status + response.statusText);
 
             const data = await response.json();
-            
-            const assistantResponse = data.messages[0];
-            const isPending = assistantResponse.startsWith('The following actions will be performed:');
-            let formattedResponse = assistantResponse;
+            const responses = [];
 
-            if (isPending) {
-                const jsonStringMatch = assistantResponse.match("({.*})");
-                if (jsonStringMatch) {
-                    try {
-                        const jsonObject = JSON.parse(jsonStringMatch[1]);
-                        const prettyJsonString = '\n' + JSON.stringify(jsonObject, null, 4);
-                        formattedResponse = assistantResponse.replace(jsonStringMatch[1], prettyJsonString);
-                    } catch (error) {
-                        console.error('Failed to parse JSON:', error);
-                    }
-                }
-            }
-
-            setMessages((prevMessages) => {
-                const filteredMessages = prevMessages.filter(msg => msg !== tempMessage);
-                return [...filteredMessages, { 
-                    text: formattedResponse, 
-                    type: 'assistant', 
-                    isPending: isPending 
-                }];
+            data.messages.forEach(message => {
+                const isPending = message.startsWith('The following actions will be performed:');
+                responses.push({ text: message, type: 'assistant', isPending: isPending });
             });
 
+            updateMessages(responses, threadId);
         } catch (error) {
-            setMessages((prevMessages) => {
-                const filteredMessages = prevMessages.filter(msg => msg !== tempMessage);
-                return [...filteredMessages, { 
-                    text: `An error occurred while processing your request: ${error}`, 
-                    type: 'assistant' 
-                }];
-            });
+            updateMessages([{ 
+                text: `An error occurred while processing your request: ${error}`, 
+                type: 'assistant' 
+            }], threadId);
         } finally {
-            waitingReplyRef.current = false;
+            waitingReplyRef.current[threadId] = false;
         }
     };
 
-    const handleSubmit = async (event) => {
+    const handleSubmitAsync = async (event) => {
         event.preventDefault();
         const action = inputMessage.trim();
         if (action) {
+            const threadId = activeThreadRef.current;
             const serverUrl = 'http://localhost:7151/api/InvokeAssistant';
+
             if (messages.length > 0 && messages[messages.length - 1].isPending) {
                 messages[messages.length - 1].isPending = false;
                 setMessages([...messages]);
             }
+            
             setMessages([...messages, { text: inputMessage, type: 'user' }]);
             setInputMessage('');
-            await handleAction(action, serverUrl);
+            await handleActionAsync(action, serverUrl, threadId);
         }
     };
 
-    const handleConfirmAction = async (action) => {
+    const handleConfirmActionAsync = async (action) => {
+        const threadId = activeThreadRef.current;
         const serverUrl = 'http://localhost:7151/api/ConfirmAction';
+
         messages[messages.length - 1].isPending = false;
         setMessages([...messages]);
-        await handleAction(action, serverUrl);
+        await handleActionAsync(action, serverUrl, threadId);
     };
 
     useEffect(() => {
@@ -213,9 +223,9 @@ function ChatBox() {
     }, [inputMessage]);
 
     const handleKeyDown = async (event) => {
-        if (event.key === 'Enter' && !event.shiftKey && !waitingReplyRef.current) {
+        if (event.key === 'Enter' && !event.shiftKey && !waitingReplyRef.current[activeThreadRef.current]) {
             event.preventDefault();
-            await handleSubmit(event);
+            await handleSubmitAsync(event);
         }
     };
 
@@ -225,7 +235,7 @@ function ChatBox() {
 
     const handleDeleteChat = (e, threadId) => {
         e.stopPropagation(); // Prevent chat selection when clicking delete
-        deleteChat(threadId);
+        deleteChatAsync(threadId);
     };
 
     return (
@@ -240,7 +250,7 @@ function ChatBox() {
 
             <div className="chat-layout">
                 <div className="chat-sidebar">
-                    <button className="new-chat-btn" onClick={createNewChat}>
+                    <button className="new-chat-btn" onClick={createNewChatAsync}>
                         <FaPlus style={{ marginRight: '8px' }} />
                         New Chat
                     </button>
@@ -248,7 +258,7 @@ function ChatBox() {
                         {Object.entries(chats).map(([threadId, _]) => (
                             <div 
                                 key={threadId} 
-                                className={`chat-item ${threadId === currentThreadId ? 'active' : ''}`}
+                                className={`chat-item ${threadId === activeThreadRef.current ? 'active' : ''}`}
                                 onClick={() => selectChat(threadId)}
                             >
                                 <span>Chat {threadId.substring(0, 8)}...</span>
@@ -277,8 +287,8 @@ function ChatBox() {
                                             {msg.type === 'user' ? msg.text : !msg.isLoading && <div className='assistant-response' dangerouslySetInnerHTML={{ __html: marked.parse(msg.text) }}></div>}
                                             {msg.type === 'assistant' && msg.isPending && (
                                                 <Container className="d-flex mt-2">
-                                                    <Button className='confirm-action-button' variant="primary" onClick={() => handleConfirmAction('Yes')}>Yes</Button>
-                                                    <Button className='confirm-action-button' variant="secondary" onClick={() => handleConfirmAction('No')}>No</Button>
+                                                    <Button className='confirm-action-button' variant="primary" onClick={() => handleConfirmActionAsync('Yes')}>Yes</Button>
+                                                    <Button className='confirm-action-button' variant="secondary" onClick={() => handleConfirmActionAsync('No')}>No</Button>
                                                 </Container>
                                             )}
                                         </ListGroup.Item>
@@ -286,7 +296,7 @@ function ChatBox() {
                                 </ListGroup>
                             </div>
                             <div className="chat-input-container">
-                                <Form onSubmit={handleSubmit} className="d-flex justify-content-center">
+                                <Form onSubmit={handleSubmitAsync} className="d-flex justify-content-center">
                                     <InputGroup className="input-group-width">
                                         <Form.Control
                                             as="textarea"
@@ -299,7 +309,7 @@ function ChatBox() {
                                             style={{ overflowY: 'auto' }}
                                             onKeyDown={handleKeyDown}
                                         />
-                                        <Button type="submit" variant={darkMode ? 'light' : 'dark'} disabled={waitingReplyRef.current}>
+                                        <Button type="submit" variant={darkMode ? 'light' : 'dark'} disabled={waitingReplyRef.current[activeThreadRef.current]}>
                                             <FaPaperPlane/>
                                         </Button>
                                     </InputGroup>
