@@ -1,18 +1,18 @@
 {
-    "name": "get_resource_group_info",
-    "description": "Provide information about a resource group: name, location, tags, and resources.",
-    "strict": true,
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "resource_group_name": {
-          "type": "string",
-          "description": "The name of the resource group."
-        }
-      },
-      "required": [
-        "resource_group_name"
-      ],
-      "additionalProperties": false
-    }
+  "name": "get_resource_group_info",
+  "description": "Provide information about a resource group: name, location, tags, and resources.",
+  "strict": true,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "resource_group_name": {
+        "type": "string",
+        "description": "The name of the resource group."
+      }
+    },
+    "required": [
+      "resource_group_name"
+    ],
+    "additionalProperties": false
+  }
 }

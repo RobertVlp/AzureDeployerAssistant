@@ -1,23 +1,23 @@
 {
-    "name": "create_resource_group",
-    "description": "Create a resource group.",
-    "strict": true,
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "resource_group_name": {
-          "type": "string",
-          "description": "The name of the resource group."
-        },
-        "location": {
-          "type": "string",
-          "description": "The region where the resource group is deployed."
-        }
+  "name": "create_resource_group",
+  "description": "Create a resource group.",
+  "strict": true,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "resource_group_name": {
+        "type": "string",
+        "description": "The name of the resource group."
       },
-      "required": [
-        "resource_group_name",
-        "location"
-      ],
-      "additionalProperties": false
-    }
+      "location": {
+        "type": "string",
+        "description": "The region where the resource group is deployed."
+      }
+    },
+    "required": [
+      "resource_group_name",
+      "location"
+    ],
+    "additionalProperties": false
+  }
 }

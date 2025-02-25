@@ -1,4 +1,5 @@
 from assistant.redis.RedisManager import RedisManager
+from assistant.network.NetworkManager import NetworkManager
 from assistant.keyVault.KeyVaultManager import KeyVaultManager
 from assistant.functionApp.FunctionAppManager import FunctionAppManager
 from assistant.resourceGroup.ResourceGroupManager import ResourceGroupManager
@@ -13,7 +14,8 @@ class Assistant:
         self.storage_account_manager = StorageAccountManager(credential, subscription_id)
         self.virtual_machine_manager = VirtualMachineManager(credential, subscription_id)
         self.redis_manager = RedisManager(credential, subscription_id)
-        
+        self.network_manager = NetworkManager(credential, subscription_id)
+
     def get_available_functions(self):
         key_vault_functions = self.key_vault_manager.get_available_functions()
         function_app_functions = self.function_app_manager.get_available_functions()
@@ -21,6 +23,7 @@ class Assistant:
         storage_account_functions = self.storage_account_manager.get_available_functions()
         virtual_machine_functions = self.virtual_machine_manager.get_available_functions()
         redis_functions = self.redis_manager.get_available_functions()
+        network_functions = self.network_manager.get_available_functions()
 
         return {
             **key_vault_functions,
@@ -28,5 +31,6 @@ class Assistant:
             **resource_group_functions,
             **storage_account_functions,
             **virtual_machine_functions,
-            **redis_functions
+            **redis_functions,
+            **network_functions
         }

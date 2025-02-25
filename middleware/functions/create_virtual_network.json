@@ -1,0 +1,32 @@
+{
+  "name": "create_virtual_network",
+  "description": "Create a virtual network.",
+  "strict": false,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "resource_group_name": {
+        "type": "string",
+        "description": "The name of the resource group."
+      },
+      "virtual_network_name": {
+        "type": "string",
+        "description": "The name of the virtual network."
+      },
+      "location": {
+        "type": "string",
+        "description": "The region where the virtual network is deployed."
+      },
+      "address_space": {
+        "type": "string",
+        "description": "The address space of the virtual network."
+      }
+    },
+    "required": [
+      "resource_group_name",
+      "virtual_network_name",
+      "location"
+    ],
+    "additionalProperties": false
+  }
+}

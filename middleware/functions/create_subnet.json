@@ -1,0 +1,32 @@
+{
+  "name": "create_subnet",
+  "description": "Create a subnet.",
+  "strict": false,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "resource_group_name": {
+        "type": "string",
+        "description": "The name of the resource group."
+      },
+      "virtual_network_name": {
+        "type": "string",
+        "description": "The name of the virtual network."
+      },
+      "subnet_name": {
+        "type": "string",
+        "description": "The name of the subnet."
+      },
+      "subnet_address_prefix": {
+        "type": "string",
+        "description": "The address prefix of the subnet."
+      }
+    },
+    "required": [
+      "resource_group_name",
+      "virtual_network_name",
+      "subnet_name"
+    ],
+    "additionalProperties": false
+  }
+}

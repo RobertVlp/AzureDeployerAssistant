@@ -1,6 +1,6 @@
 {
-  "name": "delete_key_vault",
-  "description": "Delete a key vault.",
+  "name": "get_subnet_info",
+  "description": "Provide information about a subnet.",
   "strict": true,
   "parameters": {
     "type": "object",
@@ -9,14 +9,19 @@
         "type": "string",
         "description": "The name of the resource group."
       },
-      "key_vault_name": {
+      "virtual_network_name": {
         "type": "string",
-        "description": "The name of the key vault."
+        "description": "The name of the virtual network."
+      },
+      "subnet_name": {
+        "type": "string",
+        "description": "The name of the subnet."
       }
     },
     "required": [
       "resource_group_name",
-      "key_vault_name"
+      "virtual_network_name",
+      "subnet_name"
     ],
     "additionalProperties": false
   }

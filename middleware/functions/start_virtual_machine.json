@@ -1,23 +1,23 @@
 {
-    "name": "start_virtual_machine",
-    "description": "Start a virtual machine.",
-    "strict": true,
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "resource_group_name": {
-          "type": "string",
-          "description": "The name of the resource group."
-        },
-        "vm_name": {
-          "type": "string",
-          "description": "The name of the virtual machine."
-        }
+  "name": "start_virtual_machine",
+  "description": "Start a virtual machine.",
+  "strict": true,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "resource_group_name": {
+        "type": "string",
+        "description": "The name of the resource group."
       },
-      "required": [
-        "resource_group_name",
-        "vm_name"
-      ],
-      "additionalProperties": false
-    }
+      "vm_name": {
+        "type": "string",
+        "description": "The name of the virtual machine."
+      }
+    },
+    "required": [
+      "resource_group_name",
+      "vm_name"
+    ],
+    "additionalProperties": false
+  }
 }

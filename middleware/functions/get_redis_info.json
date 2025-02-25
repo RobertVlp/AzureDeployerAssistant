@@ -1,23 +1,23 @@
 {
-    "name": "get_redis_info",
-    "description": "Provide information about a Redis cache.",
-    "strict": true,
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "resource_group_name": {
-          "type": "string",
-          "description": "The name of the resource group."
-        },
-        "redis_name": {
-          "type": "string",
-          "description": "The name of the Redis cache."
-        }
+  "name": "get_redis_info",
+  "description": "Provide information about a Redis cache.",
+  "strict": true,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "resource_group_name": {
+        "type": "string",
+        "description": "The name of the resource group."
       },
-      "required": [
-        "resource_group_name",
-        "redis_name"
-      ],
-      "additionalProperties": false
-    }
+      "redis_name": {
+        "type": "string",
+        "description": "The name of the Redis cache."
+      }
+    },
+    "required": [
+      "resource_group_name",
+      "redis_name"
+    ],
+    "additionalProperties": false
+  }
 }

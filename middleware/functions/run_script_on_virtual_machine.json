@@ -1,28 +1,28 @@
 {
-    "name": "run_script_on_virtual_machine",
-    "description": "Run a script on a virtual machine.",
-    "strict": true,
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "resource_group_name": {
-          "type": "string",
-          "description": "The name of the resource group."
-        },
-        "vm_name": {
-          "type": "string",
-          "description": "The name of the virtual machine."
-        },
-        "script": {
-          "type": "string",
-          "description": "The script to run on the virtual machine."
-        }
+  "name": "run_script_on_virtual_machine",
+  "description": "Run a script on a virtual machine.",
+  "strict": true,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "resource_group_name": {
+        "type": "string",
+        "description": "The name of the resource group."
       },
-      "required": [
-        "resource_group_name",
-        "vm_name",
-        "script"
-      ],
-      "additionalProperties": false
-    }
+      "vm_name": {
+        "type": "string",
+        "description": "The name of the virtual machine."
+      },
+      "script": {
+        "type": "string",
+        "description": "The script to run on the virtual machine."
+      }
+    },
+    "required": [
+      "resource_group_name",
+      "vm_name",
+      "script"
+    ],
+    "additionalProperties": false
+  }
 }
