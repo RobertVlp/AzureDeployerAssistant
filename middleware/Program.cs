@@ -11,6 +11,10 @@ var builder = Host.CreateDefaultBuilder(args)
     .ConfigureFunctionsWebApplication(app =>
     {
         app.UseMiddleware<CorsMiddleware>();
+    })
+    .ConfigureServices(services => 
+    {
+        services.AddFunctionsWorkerCore();
     });
 
 var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") 
