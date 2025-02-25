@@ -47,55 +47,17 @@ namespace AIAssistant.Assistants
 
         private async Task<List<string>> HandleStreamingUpdatesAsync(AsyncCollectionResult<StreamingUpdate> updates)
         {
-            if (updates == null)
-            {
-                return [];
-            }
-            
             StringBuilder response = new();
             Queue<RequiredActionUpdate> pendingRequests = [];
-            ThreadRun? currentRun;
             List<RequiredActionUpdate> allActions = [];
-            bool hasConfirmationActions = false;
 
             try
             {
+                ThreadRun? currentRun = null;
+
                 do
                 {
-                    currentRun = null;
-                    List<ToolOutput> outputs = [];
-
-                    await foreach (StreamingUpdate update in updates)
-                    {
-                        if (update == null)
-                        {
-                            continue;
-                        }
-
-                        switch (update)
-                        {
-                            case RequiredActionUpdate requiredActionUpdate:
-                                string functionName = requiredActionUpdate.FunctionName;
-                                allActions.Add(requiredActionUpdate);
-
-                                if (functionName.StartsWith("create") || functionName.StartsWith("delete"))
-                                {
-                                    hasConfirmationActions = true;
-                                }
-                                break;
-
-                            case RunUpdate runUpdate:
-                                currentRun = runUpdate;
-                                break;
-
-                            case MessageContentUpdate messageContentUpdate:
-                                response.Append(messageContentUpdate.Text);
-                                break;
-
-                            default:
-                                break;
-                        }
-                    }
+                    (currentRun, bool hasConfirmationActions) = await ProcessUpdatesAsync(updates, response, allActions);
 
                     if (currentRun != null && allActions.Count > 0)
                     {
@@ -108,27 +70,22 @@ namespace AIAssistant.Assistants
                         else
                         {
                             // If no confirmation actions, process all actions immediately
+                            List<ToolOutput> outputs = [];
+
                             foreach (var action in allActions)
                             {
-                                string output = await CallToolAsync(
-                                    action.FunctionName,
-                                    action.FunctionArguments
-                                );
+                                string output = await CallToolAsync(action.FunctionName, action.FunctionArguments);
                                 outputs.Add(new ToolOutput(action.ToolCallId, output));
                             }
 
                             allActions.Clear();
-                            
+
                             if (!_activeThreads.Contains(currentRun.ThreadId))
                             {
                                 break;
                             }
 
-                            updates = _client.SubmitToolOutputsToRunStreamingAsync(
-                                currentRun.ThreadId,
-                                currentRun.Id,
-                                outputs
-                            );
+                            updates = _client.SubmitToolOutputsToRunStreamingAsync(currentRun.ThreadId, currentRun.Id, outputs);
                         }
                     }
                     else
@@ -145,6 +102,48 @@ namespace AIAssistant.Assistants
                 _logger.LogWarning("Request timed out.");
                 return ["The request timed out. Please try again."];
             }
+        }
+
+        private static async Task<(ThreadRun? currentRun, bool hasConfirmationActions)> ProcessUpdatesAsync(
+            AsyncCollectionResult<StreamingUpdate> updates,
+            StringBuilder response,
+            List<RequiredActionUpdate> allActions
+        )
+        {
+            ThreadRun? currentRun = null;
+            bool hasConfirmationActions = false;
+
+            if (updates != null)
+            {
+                await foreach (StreamingUpdate update in updates)
+                {
+                    switch (update)
+                    {
+                        case RequiredActionUpdate requiredActionUpdate:
+                            string functionName = requiredActionUpdate.FunctionName;
+                            allActions.Add(requiredActionUpdate);
+
+                            if (functionName.StartsWith("create") || functionName.StartsWith("delete"))
+                            {
+                                hasConfirmationActions = true;
+                            }
+                            break;
+
+                        case RunUpdate runUpdate:
+                            currentRun = runUpdate;
+                            break;
+
+                        case MessageContentUpdate messageContentUpdate:
+                            response.Append(messageContentUpdate.Text);
+                            break;
+
+                        default:
+                            break;
+                    }
+                }
+            }
+
+            return (currentRun, hasConfirmationActions);
         }
 
         private List<string> BuildResponse(StringBuilder response, Queue<RequiredActionUpdate> pendingRequests, ThreadRun? currentRun)
