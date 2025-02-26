@@ -59,7 +59,7 @@ messages-container::-webkit-scrollbar-track {
 
 .chat-input-container {
     border-top: 2px solid #ccc;
-    padding-top: 10px;
+    padding-top: 16px;
 }
 
 .dark-mode .chat-input-container {
@@ -239,6 +239,7 @@ body, .chat-box, .user-message, .assistant-message,
 .chat-layout {
     display: flex;
     width: 100%;
+    max-width: 1500px;
     min-height: 85vh;
 }
 
