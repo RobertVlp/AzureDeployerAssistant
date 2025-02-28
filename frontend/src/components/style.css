@@ -19,9 +19,7 @@
 .chat-box {
     height: 85vh;
     max-height: 85vh;
-    border: 2px solid #ccc;
-    border-radius: 5px;
-    margin: 20px 10px; /* Reduce the margin */
+    margin: 20px 10px;
     padding: 10px;
     align-self: center;
     overflow-x: hidden;
@@ -34,9 +32,8 @@
     flex-grow: 1;
     overflow-x: hidden;
     overflow-y: auto;
-    margin-bottom: 10px;
     scroll-behavior: smooth;
-    padding-right: 5px; /* Add some padding for the scrollbar */
+    padding-right: 8px; /* Add some padding for the scrollbar */
 }
 
 /* Style the scrollbar for WebKit browsers */
@@ -58,35 +55,34 @@ messages-container::-webkit-scrollbar-track {
 }
 
 .chat-input-container {
-    border-top: 2px solid #ccc;
     padding-top: 16px;
-}
-
-.dark-mode .chat-input-container {
-    border-top-color: #303030;
 }
 
 .input-group-width {
     max-width: 80%;
     margin-bottom: 8px;
+    margin-top: 16px;
 }
 
 .user-message, .assistant-message {
     margin: 5px 0;
     word-wrap: break-word;
     white-space: pre-wrap;
-    max-width: 50%;
-    border-top-width: thin !important;
 }
 
 .user-message {
-    background-color: #009be3 !important;
+    background-color: hsla(0,0%,91%,.5) !important;
+    border-color: hsla(0,0%,91%,.5) !important;
+    max-width: 70%;
     justify-self: right;
 }
 
 .assistant-message {
-    background-color: #d7d0d0 !important;
     justify-self: left;
+}
+
+.list-group-item {
+    border: none !important;
 }
 
 .input-group-width textarea {
@@ -108,14 +104,13 @@ messages-container::-webkit-scrollbar-track {
     padding: 5px 15px !important;
     font-size: 12px !important;
     border-radius: 0.75em !important;
-    background-color: #d7d0d0 !important;
+    background-color: #ffffff !important;
     border: 2px solid #4b4b4b !important;
     color: #000000 !important;
 }
 
 .confirm-action-button:hover {
-    background-color: #4b4b4b !important;
-    color: #fff !important;
+    background-color: #e6e6e6 !important;
 }
 
 .assistant-response * {
@@ -132,12 +127,12 @@ messages-container::-webkit-scrollbar-track {
 }
 
 .assistant-response code {
-    background-color: #ededed;
+    background-color: inherit;
     color:#000000;
 }
 
 .dark-mode {
-    background-color: rgb(17 24 39 / var(--tw-bg-opacity, 1));
+    background-color: #181818;
     color: #ffffff;
     margin: 0;
     padding: 0;
@@ -149,13 +144,14 @@ messages-container::-webkit-scrollbar-track {
 }
 
 .dark-mode .user-message {
-    background-color: #314f6e !important;
-    color: #ffffff !important;
+    border-color: rgba(50, 50, 50, .85) !important;
+    background-color: rgba(50,50,50,.85) !important;
+    color: #ffffff;
 }
 
 .dark-mode .assistant-message {
-    background-color: #2a2a2a !important;
-    color: #ffffff !important;
+    background-color: #181818 !important;
+    color: #ffffff;;
 }
 
 .dark-mode .page-heading {
@@ -174,24 +170,24 @@ messages-container::-webkit-scrollbar-track {
 
 .input-group-width .form-control:focus {
     border-color: #4b4b4b;
-    box-shadow: 0 0 0 0.2rem rgba(75, 75, 75, 0.25);
+    box-shadow: 0 0 0 0.1rem rgba(75, 75, 75, 0.25);
 }
 
 .dark-mode .input-group-width .form-control:focus {
     border-color: #6c757d;
-    box-shadow: 0 0 0 0.2rem rgba(108, 117, 125, 0.25);
+    box-shadow: 0 0 0 0.1rem rgba(108, 117, 125, 0.25);
     background-color: #181818;
     color: #ffffff;
 }
 
 .dark-mode .assistant-response code {
-    background-color: #2a2a2a;
+    background-color: inherit;
     color: #ffffff;
 }
 
 .dark-mode .confirm-action-button {
-    background-color: #2a2a2a !important;
-    border-color: #6c6c6c !important;
+    background-color: #181818 !important;
+    border-color: #ffffff !important;
     color: #ffffff !important;
 }
 
@@ -270,7 +266,7 @@ body, .chat-box, .user-message, .assistant-message,
     cursor: pointer;
     display: flex;
     align-items: center;
-    background-color: #f8f9fa;
+    background-color: hsla(0,0%,91%,.5);
 }
 
 .delete-chat-btn:hover {
@@ -285,7 +281,7 @@ body, .chat-box, .user-message, .assistant-message,
 }
 
 .dark-mode .chat-item {
-    background-color: #2a2a2a;
+    background-color: rgba(50,50,50,.85);
 }
 
 .chat-item:hover {
@@ -297,11 +293,11 @@ body, .chat-box, .user-message, .assistant-message,
 }
 
 .chat-item.active {
-    background-color: #c7cbce;
+    background-color: #c7cbced8;
 }
 
 .dark-mode .chat-item.active {
-    background-color: #484848;
+    background-color: #5a5a5a;
 }
 
 .new-chat-btn {
@@ -332,4 +328,25 @@ body, .chat-box, .user-message, .assistant-message,
 
 .chat-container-main {
     flex: 1;
+}
+
+.input-group textarea::-webkit-scrollbar {
+    width: 8px;
+}
+
+.input-group textarea::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.input-group textarea::-webkit-scrollbar-thumb {
+    background-color: #888;
+    border-radius: 4px;
+}
+
+.input-group textarea::-webkit-scrollbar-button {
+    display: none;
+}
+
+.dark-mode .input-group textarea::-webkit-scrollbar-thumb {
+    background-color: #555;
 }

@@ -1,15 +1,15 @@
 import React from 'react';
 import { FaPlus, FaTrash } from 'react-icons/fa';
 
-function ChatSidebar({ chats, activeThreadId, createNewChat, deleteChat, selectChat }) {
+function ChatSidebar({ chats, activeThreadId, onCreateNewChat, onDeleteChat, onSelectChat }) {
     const handleDeleteChat = (e, threadId) => {
         e.stopPropagation(); // Prevent chat selection when clicking delete
-        deleteChat(threadId);
+        onDeleteChat(threadId);
     };
 
     return (
         <div className="chat-sidebar">
-            <button className="new-chat-btn" onClick={createNewChat}>
+            <button className="new-chat-btn" onClick={onCreateNewChat}>
                 <FaPlus style={{ marginRight: '8px' }} />
                 New Chat
             </button>
@@ -18,17 +18,15 @@ function ChatSidebar({ chats, activeThreadId, createNewChat, deleteChat, selectC
                     <div 
                         key={threadId} 
                         className={`chat-item ${threadId === activeThreadId ? 'active' : ''}`}
-                        onClick={() => selectChat(threadId)}
+                        onClick={() => onSelectChat(threadId)}
                     >
                         <span>Chat {threadId.substring(0, 8)}...</span>
-                        {Object.keys(chats).length > 1 &&
                             <div 
                                 className="delete-chat-btn" 
                                 onClick={(e) => handleDeleteChat(e, threadId)}
                             >
                                 <FaTrash />
                             </div>
-                        }
                     </div>
                 ))}
             </div>

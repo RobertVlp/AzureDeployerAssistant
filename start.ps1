@@ -19,7 +19,18 @@ function Start-InNewTerminal {
 Write-Host "Starting Middleware..."
 Start-InNewTerminal -Path $middlewarePath -Command $middlewareRunCommand
 
-Start-Sleep -Seconds 10
+$middlewareStarted = $false
+$timeout = 0
+while ($middlewareStarted -eq $false -and $timeout -lt 10) {
+    $timeout++
+    $middlewareStarted = Test-NetConnection -ComputerName "localhost" -Port 7151 -InformationLevel Quiet
+    Start-Sleep -Seconds 1
+}
+
+if ($middlewareStarted -eq $false) {
+    Write-Host "Middleware failed to start"
+    exit
+}
 
 Write-Host "Starting Frontend..."
 Start-InNewTerminal -Path $frontendPath -Command $frontendRunCommand

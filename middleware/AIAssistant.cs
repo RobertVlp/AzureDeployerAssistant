@@ -1,9 +1,11 @@
 using System.Net;
+using System.Text;
 using System.Text.Json;
 using AIAssistant.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 
 namespace AIAssistant
@@ -32,43 +34,81 @@ namespace AIAssistant
         }
 
         [Function("DeleteThread")]
-        public async Task<ContentResult> DeleteThreadAsync([HttpTrigger(AuthorizationLevel.Anonymous, "delete")] HttpRequest req)
+        public async Task<ContentResult> DeleteThreadAsync([HttpTrigger(AuthorizationLevel.Anonymous, "delete")] HttpRequestData req)
         {
             _logger.LogInformation("Deleting an existing thread.");
-            return await RunAssistantAsync(req, _assistant.DeleteThreadAsync);
+            
+            try
+            {
+                AssistantRequest data = await ParseRequestBody(req);
+                string message = await _assistant.DeleteThreadAsync(data);
+                return CreateResponse(HttpStatusCode.OK, JsonSerializer.Serialize(message));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to delete the thread.");
+                string error = $"Failed to delete the thread: {ex.Message}";
+                return CreateResponse(HttpStatusCode.BadRequest, JsonSerializer.Serialize(new { error }));
+            }
         }
 
         [Function("InvokeAssistant")]
-        public async Task<ContentResult> RunAsync([HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequest req)
+        public async Task<HttpResponseData> RunAsync([HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequestData req)
         {
             _logger.LogInformation("Assistant received a new request.");
-            return await RunAssistantAsync(req, _assistant.ProcessRequestAsync);
+            return await RunAssistantAsync(req, _assistant.StreamResponseAsync);
         }
 
         [Function("ConfirmAction")]
-        public async Task<ContentResult> ConfirmActionAsync([HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequest req)
+        public async Task<HttpResponseData> ConfirmActionAsync([HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequestData req)
         {
             _logger.LogInformation("Assistant received an action confirmation.");
             return await RunAssistantAsync(req, _assistant.ConfirmActionAsync);
         }
 
-        private async Task<ContentResult> RunAssistantAsync(HttpRequest req, Func<AssistantRequest, Task<List<string>>> RunAction)
+        private async Task<HttpResponseData> RunAssistantAsync(HttpRequestData req, Func<AssistantRequest, Stream, Task> RunAction)
         {
             try
             {
-                string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-                AssistantRequest? data = JsonSerializer.Deserialize<AssistantRequest>(requestBody) 
-                    ?? throw new BadHttpRequestException("Invalid request: body is empty.");
-                
-                List<string> messages = await RunAction(data);
-                return CreateResponse(HttpStatusCode.OK, JsonSerializer.Serialize(new { messages }));
+                AssistantRequest data = await ParseRequestBody(req);
+                HttpResponseData? response = req.CreateResponse();
+
+                response.Headers.Add("Content-Type", "text/event-stream");
+                response.Headers.Add("Cache-Control", "no-cache");
+                response.Headers.Add("Connection", "keep-alive");
+                response.StatusCode = HttpStatusCode.OK;
+
+                try
+                {
+                    await RunAction(data, response.Body);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error during streaming.");
+
+                    var errorData = $"data: {{ \"error\": \"{ex.Message.Replace("\n", "\\n")}\" }}\n\n";
+                    await response.Body.WriteAsync(Encoding.UTF8.GetBytes(errorData));
+                }
+
+                return response;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while processing the request.");
-                string error = $"An error occurred while processing the request: {ex.Message}";
-                return CreateResponse(HttpStatusCode.BadRequest, JsonSerializer.Serialize(new { error }));
+                
+                var errorResponse = req.CreateResponse(HttpStatusCode.BadRequest);
+                await errorResponse.WriteAsJsonAsync(new { error = $"An error occurred: {ex.Message}" });
+                return errorResponse;
             }
+        }
+
+        private static async Task<AssistantRequest> ParseRequestBody(HttpRequestData req)
+        {
+            string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
+            AssistantRequest data = JsonSerializer.Deserialize<AssistantRequest>(requestBody)
+                ?? throw new BadHttpRequestException("Invalid request: body is empty.");
+
+            return data;
         }
 
         private static ContentResult CreateResponse(HttpStatusCode statusCode, string message)

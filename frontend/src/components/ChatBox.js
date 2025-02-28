@@ -11,6 +11,7 @@ function ChatBox() {
     const [messages, setMessages] = useState([]);
     const [chats, setChats] = useState({});
     const waitingReplyRef = useRef({});
+    const waitingFirstMessageRef = useRef(false);
     const activeThreadRef = useRef(null);
 
     const createThreadAsync = async () => {
@@ -58,37 +59,83 @@ function ChatBox() {
             return remaining;
         });
 
+        delete waitingReplyRef.current[threadId];
         await deleteThreadAsync(threadId);
     };
 
     const selectChat = (threadId) => {
         activeThreadRef.current = threadId;
+        waitingReplyRef.current[threadId] = false;
         setMessages(chats[threadId] || []);
     };
 
-    useEffect(() => {
-        let isMounted = true;
+    const initializeChat = async () => {
+        activeThreadRef.current = await createThreadAsync();
+    };
 
-        const initializeChat = async () => {
-            if (Object.keys(chats).length === 0) {
-                const threadId = await createThreadAsync();
-                if (isMounted) {
-                    setChats(prevChats => {
-                        if (Object.keys(prevChats).length === 0) {
-                            const newChats = { [threadId]: [] };
-                            activeThreadRef.current = threadId;
-                            return newChats;
-                        }
-                        return prevChats;
-                    });
-                }
+    const handleActionAsync = async (action, url) => {
+        if (!activeThreadRef.current) {
+            waitingFirstMessageRef.current = true;
+            await initializeChat();
+            waitingFirstMessageRef.current = false;
+        }
+
+        const threadId = activeThreadRef.current;
+        waitingReplyRef.current[threadId] = true;
+
+        const streamingMessage = { text: '', type: 'assistant', isLoading: true };
+        setMessages(prev => [...prev, streamingMessage]);
+
+        try {
+            await handleChatResponseStream(url, threadId, action, streamingMessage);
+        } catch (error) {
+            streamingMessage.isLoading = false;
+            streamingMessage.text = `An error occurred while processing your request: ${error}`;
+            setMessages(prev => [...prev]);
+        } finally {
+            waitingReplyRef.current[threadId] = false;
+        }
+    };
+
+    const handleChatResponseStream = async (url, threadId, action, streamingMessage) => {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                threadId: threadId,
+                prompt: action
+            })
+        });
+
+        if (!response.ok) throw new Error(response.status + response.statusText);
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        streamingMessage.isLoading = false;
+        setMessages(prev => [...prev]);
+
+        while (true) {
+            const { done, value } = await reader.read();
+
+            if (done) {
+                break;
             }
-        };
 
-        initializeChat();
-        return () => { isMounted = false; };
-        // eslint-disable-next-line
-    }, []);
+            const chunk = decoder.decode(value, { stream: true });
+            streamingMessage.text += chunk;
+
+            setMessages(prev => [...prev]);
+        }
+
+        if (streamingMessage.text.includes('The following actions will be performed:')) {
+            streamingMessage.isPending = true;
+        }
+    }
+
+    const toggleDarkMode = () => {
+        setDarkMode(!darkMode);
+    };
 
     useEffect(() => {
         if (activeThreadRef.current && messages.length > 0) {
@@ -98,70 +145,6 @@ function ChatBox() {
             }));
         }
     }, [messages]);
-
-    const updateMessages = (newMessages, threadId) => {
-        setChats(prevChats => {
-            const targetChat = prevChats[threadId];
-            if (!targetChat) {
-                return prevChats;
-            }
-            
-            const filteredMessages = targetChat.filter(msg => !msg.isLoading);
-            
-            return {
-                ...prevChats,
-                [threadId]: [...filteredMessages, ...newMessages]
-            };
-        });
-
-        if (threadId === activeThreadRef.current) {
-            setMessages(prevMessages => {
-                const filteredMessages = prevMessages.filter(msg => !msg.isLoading);
-                return [...filteredMessages, ...newMessages];
-            });
-        }
-    };
-
-    const handleActionAsync = async (action, url, threadId) => {
-        try {
-            const tempMessage = { text: '', type: 'assistant', isLoading: true };
-            setMessages(prev => [...prev, tempMessage]);
-
-            waitingReplyRef.current[threadId] = true;
-
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    threadId: threadId,
-                    prompt: action 
-                })
-            });
-
-            if (!response.ok) throw new Error(response.status + response.statusText);
-
-            const data = await response.json();
-            const responses = [];
-
-            data.messages.forEach(message => {
-                const isPending = message.startsWith('The following actions will be performed:');
-                responses.push({ text: message, type: 'assistant', isPending: isPending });
-            });
-
-            updateMessages(responses, threadId);
-        } catch (error) {
-            updateMessages([{ 
-                text: `An error occurred while processing your request: ${error}`, 
-                type: 'assistant' 
-            }], threadId);
-        } finally {
-            waitingReplyRef.current[threadId] = false;
-        }
-    };
-
-    const toggleDarkMode = () => {
-        setDarkMode(!darkMode);
-    };
 
     return (
         <Container fluid className={darkMode ? 'dark-mode' : ''} style={{ display: 'flex', justifyContent: 'center' }}>
@@ -185,9 +168,8 @@ function ChatBox() {
                 <ChatArea 
                     messages={messages}
                     setMessages={setMessages}
-                    activeThreadId={activeThreadRef.current}
                     handleActionAsync={handleActionAsync}
-                    isWaitingReply={waitingReplyRef.current[activeThreadRef.current]}
+                    isWaitingReply={waitingReplyRef.current[activeThreadRef.current] || waitingFirstMessageRef.current}
                     darkMode={darkMode}
                 />
             </div>

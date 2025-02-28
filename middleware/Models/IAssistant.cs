@@ -4,10 +4,10 @@ namespace AIAssistant.Models
     {
         Task<string> CreateThreadAsync();
 
-        Task<List<string>> DeleteThreadAsync(AssistantRequest request);
-        
-        Task<List<string>> ProcessRequestAsync(AssistantRequest request);
+        Task<string> DeleteThreadAsync(AssistantRequest request);
 
-        Task<List<string>> ConfirmActionAsync(AssistantRequest request);
+        Task ConfirmActionAsync(AssistantRequest request, Stream responseStream);
+
+        Task StreamResponseAsync(AssistantRequest request, Stream responseStream);
     }
 }

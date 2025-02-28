@@ -46,7 +46,7 @@ function ChatInput({ onSubmit, isWaitingReply, darkMode }) {
                         value={inputMessage}
                         onChange={(e) => setInputMessage(e.target.value)}
                         ref={textareaRef}
-                        style={{ overflowY: 'auto' }}
+                        style={{ overflowY: 'auto'}}
                         onKeyDown={handleKeyDown}
                     />
                     <Button 

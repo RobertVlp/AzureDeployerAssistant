@@ -35,164 +35,17 @@ namespace AIAssistant.Assistants
             return thread.Id;
         }
 
-        public async Task<List<string>> DeleteThreadAsync(AssistantRequest request)
+        public async Task<string> DeleteThreadAsync(AssistantRequest request)
         {
             (string threadId, _) = request;
             _activeThreads.Remove(threadId);
             await CancelPendingActionsAsync(threadId);
             await _client.DeleteThreadAsync(threadId);
 
-            return [$"The thread with id {threadId} has been deleted."];
+            return $"The thread with id {threadId} has been deleted.";
         }
 
-        private async Task<List<string>> HandleStreamingUpdatesAsync(AsyncCollectionResult<StreamingUpdate> updates)
-        {
-            StringBuilder response = new();
-            Queue<RequiredActionUpdate> pendingRequests = [];
-            List<RequiredActionUpdate> allActions = [];
-
-            try
-            {
-                ThreadRun? currentRun = null;
-
-                do
-                {
-                    (currentRun, bool hasConfirmationActions) = await ProcessUpdatesAsync(updates, response, allActions);
-
-                    if (currentRun != null && allActions.Count > 0)
-                    {
-                        if (hasConfirmationActions)
-                        {
-                            // If there are any confirmation actions, all actions need to wait for confirmation
-                            allActions.ForEach(pendingRequests.Enqueue);
-                            break;
-                        }
-                        else
-                        {
-                            // If no confirmation actions, process all actions immediately
-                            List<ToolOutput> outputs = [];
-
-                            foreach (var action in allActions)
-                            {
-                                string output = await CallToolAsync(action.FunctionName, action.FunctionArguments);
-                                outputs.Add(new ToolOutput(action.ToolCallId, output));
-                            }
-
-                            allActions.Clear();
-
-                            if (!_activeThreads.Contains(currentRun.ThreadId))
-                            {
-                                break;
-                            }
-
-                            updates = _client.SubmitToolOutputsToRunStreamingAsync(currentRun.ThreadId, currentRun.Id, outputs);
-                        }
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-                while (currentRun?.Status.IsTerminal == false);
-
-                return BuildResponse(response, pendingRequests, currentRun);
-            }
-            catch (OperationCanceledException)
-            {
-                _logger.LogWarning("Request timed out.");
-                return ["The request timed out. Please try again."];
-            }
-        }
-
-        private static async Task<(ThreadRun? currentRun, bool hasConfirmationActions)> ProcessUpdatesAsync(
-            AsyncCollectionResult<StreamingUpdate> updates,
-            StringBuilder response,
-            List<RequiredActionUpdate> allActions
-        )
-        {
-            ThreadRun? currentRun = null;
-            bool hasConfirmationActions = false;
-
-            if (updates != null)
-            {
-                await foreach (StreamingUpdate update in updates)
-                {
-                    switch (update)
-                    {
-                        case RequiredActionUpdate requiredActionUpdate:
-                            string functionName = requiredActionUpdate.FunctionName;
-                            allActions.Add(requiredActionUpdate);
-
-                            if (functionName.StartsWith("create") || functionName.StartsWith("delete"))
-                            {
-                                hasConfirmationActions = true;
-                            }
-                            break;
-
-                        case RunUpdate runUpdate:
-                            currentRun = runUpdate;
-                            break;
-
-                        case MessageContentUpdate messageContentUpdate:
-                            response.Append(messageContentUpdate.Text);
-                            break;
-
-                        default:
-                            break;
-                    }
-                }
-            }
-
-            return (currentRun, hasConfirmationActions);
-        }
-
-        private List<string> BuildResponse(StringBuilder response, Queue<RequiredActionUpdate> pendingRequests, ThreadRun? currentRun)
-        {
-            List<string> responses = [];
-
-            if (!string.IsNullOrEmpty(response.ToString()))
-            {
-                responses.Add(response.ToString());
-            }
-
-            if (pendingRequests.Count > 0 && currentRun != null)
-            {
-                _pendingRequests[currentRun.ThreadId] = (currentRun.Id, pendingRequests);
-                StringBuilder builder = new();
-
-                builder.Append("The following actions will be performed:\n");
-
-                foreach (RequiredActionUpdate action in pendingRequests)
-                {
-                    string functionArguments = JsonSerializer.Serialize(
-                        JsonSerializer.Deserialize<object>(action.FunctionArguments),
-                        _jsonSerializerOptions
-                    );
-                    builder.Append($"{action.FunctionName} with arguments:\n{functionArguments}\n");
-                }
-
-                builder.Append("Do you want to proceed?");
-                responses.Add(builder.ToString());
-            }
-
-            return responses;
-        }
-
-        public async Task<List<string>> ProcessRequestAsync(AssistantRequest request)
-        {
-            (string threadId, string prompt) = request;
-            await CancelPendingActionsAsync(threadId);
-
-            await _client.CreateMessageAsync(threadId, MessageRole.User, [prompt]);
-
-            List<string> responses = await HandleStreamingUpdatesAsync(
-                _client.CreateRunStreamingAsync(threadId, _assistant.Id)
-            );
-
-            return responses;
-        }
-
-        public async Task<List<string>> ConfirmActionAsync(AssistantRequest request)
+        public async Task ConfirmActionAsync(AssistantRequest request, Stream responseStream)
         {
             (string threadId, string prompt) = request;
             (string runId, Queue<RequiredActionUpdate> pendingRequests) = _pendingRequests[threadId];
@@ -203,7 +56,9 @@ namespace AIAssistant.Assistants
             if (run.Value.Status == RunStatus.Expired)
             {
                 _ = _client.CreateMessageAsync(threadId, MessageRole.Assistant, ["The action has expired. Please try again."]);
-                return ["The action has expired. Please try again."];
+                string message = "The action has expired. Please try again.";
+                await WriteMessageAsync(responseStream, message);
+                return;
             }
 
             if (prompt.Trim().ToLower().Equals("yes"))
@@ -219,17 +74,20 @@ namespace AIAssistant.Assistants
 
                 if (!_activeThreads.Contains(threadId))
                 {
-                    return ["The thread has been deleted."];
+                    return;
                 }
 
-                return await HandleStreamingUpdatesAsync(
-                    _client.SubmitToolOutputsToRunStreamingAsync(threadId, runId, outputs)
+                await ProcessStreamingUpdatesAsync(
+                    _client.SubmitToolOutputsToRunStreamingAsync(threadId, runId, outputs),
+                    responseStream,
+                    []
                 );
             }
             else
             {
                 await CancelPendingActionsAsync(threadId);
-                return ["No actions were executed. Try again or provide more specific instructions."];
+                string message = "No actions were executed. Try again or provide more specific instructions.";
+                await WriteMessageAsync(responseStream, message);
             }
         }
 
@@ -273,6 +131,141 @@ namespace AIAssistant.Assistants
                 HttpStatusCode.OK => jsonResponse["response"]?.ToString() ?? string.Empty,
                 _ => throw new Exception(jsonResponse["error"]?.ToString())
             };
+        }
+
+        public async Task StreamResponseAsync(AssistantRequest request, Stream responseStream)
+        {
+            (string threadId, string prompt) = request;
+            await CancelPendingActionsAsync(threadId);
+
+            await _client.CreateMessageAsync(threadId, MessageRole.User, [prompt]);
+
+            var updates = _client.CreateRunStreamingAsync(threadId, _assistant.Id);
+            Queue<RequiredActionUpdate> pendingRequests = [];
+            List<RequiredActionUpdate> allActions = [];
+            ThreadRun? currentRun = null;
+
+            try
+            {
+                do
+                {
+                    (currentRun, bool hasConfirmationActions) = await ProcessStreamingUpdatesAsync(updates, responseStream, allActions);
+
+                    if (currentRun != null && allActions.Count > 0)
+                    {
+                        if (hasConfirmationActions)
+                        {
+                            allActions.ForEach(pendingRequests.Enqueue);
+                            await WriteConfirmationMessageAsync(responseStream, pendingRequests);
+                            if (currentRun != null)
+                            {
+                                _pendingRequests[currentRun.ThreadId] = (currentRun.Id, pendingRequests);
+                            }
+                            break;
+                        }
+                        else
+                        {
+                            List<ToolOutput> outputs = [];
+                            foreach (var action in allActions)
+                            {
+                                string output = await CallToolAsync(action.FunctionName, action.FunctionArguments);
+                                outputs.Add(new ToolOutput(action.ToolCallId, output));
+                            }
+
+                            allActions.Clear();
+
+                            if (!_activeThreads.Contains(currentRun.ThreadId))
+                            {
+                                break;
+                            }
+
+                            updates = _client.SubmitToolOutputsToRunStreamingAsync(currentRun.ThreadId, currentRun.Id, outputs);
+                        }
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+                while (currentRun?.Status.IsTerminal == false);
+            }
+            catch (OperationCanceledException)
+            {
+                var timeoutMessage = Encoding.UTF8.GetBytes("\nThe request timed out. Please try again.");
+                await responseStream.WriteAsync(timeoutMessage);
+                _logger.LogWarning("Request timed out.");
+            }
+            finally
+            {
+                await responseStream.FlushAsync();
+            }
+        }
+
+        private static async Task<(ThreadRun? currentRun, bool hasConfirmationActions)> ProcessStreamingUpdatesAsync(
+            AsyncCollectionResult<StreamingUpdate> updates,
+            Stream responseStream,
+            List<RequiredActionUpdate> allActions
+        )
+        {
+            ThreadRun? currentRun = null;
+            bool hasConfirmationActions = false;
+
+            if (updates != null)
+            {
+                await foreach (StreamingUpdate update in updates)
+                {
+                    switch (update)
+                    {
+                        case RequiredActionUpdate requiredActionUpdate:
+                            string functionName = requiredActionUpdate.FunctionName;
+                            allActions.Add(requiredActionUpdate);
+
+                            if (functionName.StartsWith("create") || functionName.StartsWith("delete"))
+                            {
+                                hasConfirmationActions = true;
+                            }
+                            break;
+
+                        case RunUpdate runUpdate:
+                            currentRun = runUpdate;
+                            break;
+
+                        case MessageContentUpdate messageContentUpdate:
+                            await WriteMessageAsync(responseStream, messageContentUpdate.Text);
+                            break;
+
+                        default:
+                            break;
+                    }
+                }
+            }
+
+            return (currentRun, hasConfirmationActions);
+        }
+
+        private static async Task WriteConfirmationMessageAsync(Stream responseStream, Queue<RequiredActionUpdate> pendingRequests)
+        {
+            string header = "\nThe following actions will be performed:\n";
+            await responseStream.WriteAsync(Encoding.UTF8.GetBytes(header));
+
+            foreach (RequiredActionUpdate action in pendingRequests)
+            {
+                string functionArguments = JsonSerializer.Serialize(
+                    JsonSerializer.Deserialize<object>(action.FunctionArguments),
+                    _jsonSerializerOptions
+                );
+                string line = $"{action.FunctionName} with arguments:\n{functionArguments}\n";
+                await responseStream.WriteAsync(Encoding.UTF8.GetBytes(line));
+            }
+
+            string footer = "Do you want to proceed?\n";
+            await WriteMessageAsync(responseStream, footer);
+        }
+
+        private static async Task WriteMessageAsync(Stream responseStream, string message)
+        {
+            await responseStream.WriteAsync(Encoding.UTF8.GetBytes(message));
+            await responseStream.FlushAsync();
         }
     }
 }

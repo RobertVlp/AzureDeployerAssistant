@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Row, Container } from 'react-bootstrap';
 import MessageList from './MessageList';
 import ChatInput from './ChatInput';
 
-function ChatArea({ messages, setMessages, activeThreadId, handleActionAsync, isWaitingReply, darkMode }) {
+function ChatArea({ messages, setMessages, handleActionAsync, isWaitingReply, darkMode }) {
+    const [waitingForReply, setWaitingForReply] = useState(isWaitingReply);
+
     const handleSubmitAsync = async (inputMessage) => {
         if (inputMessage) {
             const serverUrl = 'http://localhost:7151/api/InvokeAssistant';
@@ -14,7 +16,9 @@ function ChatArea({ messages, setMessages, activeThreadId, handleActionAsync, is
             }
             
             setMessages([...messages, { text: inputMessage, type: 'user' }]);
-            await handleActionAsync(inputMessage, serverUrl, activeThreadId);
+            setWaitingForReply(true);
+            await handleActionAsync(inputMessage, serverUrl);
+            setWaitingForReply(false);
         }
     };
 
@@ -22,12 +26,14 @@ function ChatArea({ messages, setMessages, activeThreadId, handleActionAsync, is
         const serverUrl = 'http://localhost:7151/api/ConfirmAction';
         messages[messages.length - 1].isPending = false;
         setMessages([...messages]);
-        await handleActionAsync(action, serverUrl, activeThreadId);
+        setWaitingForReply(true);
+        await handleActionAsync(action, serverUrl);
+        setWaitingForReply(false);
     };
 
     return (
         <div className="chat-container-main">
-            <Row className="justify-content-md-center" style={{ width: '85%', margin: 'auto 64px' }}>
+            <Row className="justify-content-md-center" style={{ width: '75%', margin: 'auto 128px' }}>
                 <Container className="chat-box">
                     <MessageList 
                         messages={messages}
@@ -35,7 +41,7 @@ function ChatArea({ messages, setMessages, activeThreadId, handleActionAsync, is
                     />
                     <ChatInput 
                         onSubmit={handleSubmitAsync}
-                        isWaitingReply={isWaitingReply}
+                        isWaitingReply={waitingForReply}
                         darkMode={darkMode}
                     />
                 </Container>

@@ -2,7 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import { ListGroup, Spinner, Container, Button } from 'react-bootstrap';
 import { marked } from 'marked';
 
-function MessageList({ messages, confirmAction }) {
+function MessageList({ messages, onConfirmAction }) {
     const messageContainerRef = useRef(null);
 
     const scrollToBottom = () => {
@@ -15,25 +15,36 @@ function MessageList({ messages, confirmAction }) {
     };
 
     useEffect(() => {
-        scrollToBottom();
+        const timer = setTimeout(() => {
+            scrollToBottom();
+        }, 100);
+        return () => clearTimeout(timer);
     }, [messages]);
 
     return (
         <div className="messages-container" ref={messageContainerRef}>
             <ListGroup className='d-grid'>
                 {messages.map((msg, index) => (
-                    <ListGroup.Item key={index} className={msg.type === 'user' ? 'user-message' : 'assistant-message'} style={{ borderRadius: '1.25em' }}>
-                        <strong>{msg.type === 'user' ? 'You: ' : 'Assistant: '}</strong>
-                        {msg.isLoading && <Spinner animation="border" size="sm" />}
-                        {msg.type === 'user' ? msg.text : !msg.isLoading && 
-                            <div className='assistant-response' 
-                                dangerouslySetInnerHTML={{ __html: marked.parse(msg.text) }}>
-                            </div>
-                        }
+                    <ListGroup.Item 
+                        key={index} 
+                        className={`${msg.type === 'user' ? 'user-message' : 'assistant-message'} ${msg.isLoading ? 'loading' : ''}`}
+                        style={{ borderRadius: '1.25em' }}
+                    >
+                        {msg.isLoading ? (
+                            <Spinner animation="grow" size="sm" />
+                        ) : (
+                            msg.type === 'user' ? (
+                                msg.text
+                            ) : (
+                                <div className='assistant-response' 
+                                    dangerouslySetInnerHTML={{ __html: marked.parse(msg.text) }}>
+                                </div>
+                            )
+                        )}
                         {msg.type === 'assistant' && msg.isPending && (
-                            <Container className="d-flex mt-2">
-                                <Button className='confirm-action-button' variant="primary" onClick={() => confirmAction('Yes')}>Yes</Button>
-                                <Button className='confirm-action-button' variant="secondary" onClick={() => confirmAction('No')}>No</Button>
+                            <Container className="d-flex">
+                                <Button className='confirm-action-button' variant="primary" onClick={() => onConfirmAction('Yes')}>Yes</Button>
+                                <Button className='confirm-action-button' variant="secondary" onClick={() => onConfirmAction('No')}>No</Button>
                             </Container>
                         )}
                     </ListGroup.Item>
