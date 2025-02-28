@@ -1,11 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Row, Container } from 'react-bootstrap';
 import MessageList from './MessageList';
 import ChatInput from './ChatInput';
 
 function ChatArea({ messages, setMessages, handleActionAsync, isWaitingReply, darkMode }) {
-    const [waitingForReply, setWaitingForReply] = useState(isWaitingReply);
-
     const handleSubmitAsync = async (inputMessage) => {
         if (inputMessage) {
             const serverUrl = 'http://localhost:7151/api/InvokeAssistant';
@@ -16,9 +14,7 @@ function ChatArea({ messages, setMessages, handleActionAsync, isWaitingReply, da
             }
             
             setMessages([...messages, { text: inputMessage, type: 'user' }]);
-            setWaitingForReply(true);
             await handleActionAsync(inputMessage, serverUrl);
-            setWaitingForReply(false);
         }
     };
 
@@ -26,9 +22,7 @@ function ChatArea({ messages, setMessages, handleActionAsync, isWaitingReply, da
         const serverUrl = 'http://localhost:7151/api/ConfirmAction';
         messages[messages.length - 1].isPending = false;
         setMessages([...messages]);
-        setWaitingForReply(true);
         await handleActionAsync(action, serverUrl);
-        setWaitingForReply(false);
     };
 
     return (
@@ -41,7 +35,7 @@ function ChatArea({ messages, setMessages, handleActionAsync, isWaitingReply, da
                     />
                     <ChatInput 
                         onSubmit={handleSubmitAsync}
-                        isWaitingReply={waitingForReply}
+                        isWaitingReply={isWaitingReply}
                         darkMode={darkMode}
                     />
                 </Container>

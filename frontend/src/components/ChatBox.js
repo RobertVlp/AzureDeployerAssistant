@@ -10,7 +10,7 @@ function ChatBox() {
     const { darkMode, setDarkMode } = useContext(ThemeContext);
     const [messages, setMessages] = useState([]);
     const [chats, setChats] = useState({});
-    const waitingReplyRef = useRef({});
+    const [waitingReply, setWaitingReply] = useState({});
     const waitingFirstMessageRef = useRef(false);
     const activeThreadRef = useRef(null);
 
@@ -59,13 +59,12 @@ function ChatBox() {
             return remaining;
         });
 
-        delete waitingReplyRef.current[threadId];
+        delete waitingReply[threadId];
         await deleteThreadAsync(threadId);
     };
 
     const selectChat = (threadId) => {
         activeThreadRef.current = threadId;
-        waitingReplyRef.current[threadId] = false;
         setMessages(chats[threadId] || []);
     };
 
@@ -81,7 +80,7 @@ function ChatBox() {
         }
 
         const threadId = activeThreadRef.current;
-        waitingReplyRef.current[threadId] = true;
+        setWaitingReply(prev => ({ ...prev, [threadId]: true }));
 
         const streamingMessage = { text: '', type: 'assistant', isLoading: true };
         setMessages(prev => [...prev, streamingMessage]);
@@ -93,7 +92,7 @@ function ChatBox() {
             streamingMessage.text = `An error occurred while processing your request: ${error}`;
             setMessages(prev => [...prev]);
         } finally {
-            waitingReplyRef.current[threadId] = false;
+            setWaitingReply(prev => ({ ...prev, [threadId]: false }));
         }
     };
 
@@ -169,7 +168,7 @@ function ChatBox() {
                     messages={messages}
                     setMessages={setMessages}
                     handleActionAsync={handleActionAsync}
-                    isWaitingReply={waitingReplyRef.current[activeThreadRef.current] || waitingFirstMessageRef.current}
+                    isWaitingReply={waitingReply[activeThreadRef.current] || waitingFirstMessageRef.current}
                     darkMode={darkMode}
                 />
             </div>
