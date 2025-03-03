@@ -25,7 +25,12 @@ namespace AIAssistant.Services
 
         public override void Flush()
         {
-            _stream.FlushAsync().GetAwaiter().GetResult();
+            throw new InvalidOperationException("Synchronous operations are disallowed. Use FlushAsync instead.");
+        }
+
+        public override Task FlushAsync(CancellationToken cancellationToken)
+        {
+            return _stream.FlushAsync(cancellationToken);
         }
 
         public override int Read(byte[] buffer, int offset, int count)

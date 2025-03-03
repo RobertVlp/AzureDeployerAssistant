@@ -2,6 +2,8 @@ namespace AIAssistant.Models
 {
     public interface IAssistant
     {
+        HashSet<string> DeletedThreads { get; }
+        
         Task<string> CreateThreadAsync();
 
         Task<string> DeleteThreadAsync(AssistantRequest request);

@@ -16,8 +16,10 @@ namespace AIAssistant.Assistants
         private readonly AssistantClient _client;
         private readonly Assistant _assistant;
         private readonly Dictionary<string, (string, Queue<RequiredActionUpdate>)> _pendingRequests;
-        private readonly HashSet<string> _activeThreads;
+        private readonly HashSet<string> _deletedThreads;
         private static readonly JsonSerializerOptions _jsonSerializerOptions = new() { WriteIndented = true };
+
+        public HashSet<string> DeletedThreads => _deletedThreads;
 
         public OpenAIAssistant(ILogger<IAssistant> logger)
         {
@@ -25,20 +27,19 @@ namespace AIAssistant.Assistants
             _client = new(Environment.GetEnvironmentVariable("OPENAI_API_KEY"));
             _assistant = _client.GetAssistant(Environment.GetEnvironmentVariable("ASSISTANT_ID"));
             _pendingRequests = [];
-            _activeThreads = [];
+            _deletedThreads = [];
         }
 
         public async Task<string> CreateThreadAsync()
         {
             AssistantThread thread = await _client.CreateThreadAsync();
-            _activeThreads.Add(thread.Id);
             return thread.Id;
         }
 
         public async Task<string> DeleteThreadAsync(AssistantRequest request)
         {
             (string threadId, _) = request;
-            _activeThreads.Remove(threadId);
+            _deletedThreads.Add(threadId);
             await CancelPendingActionsAsync(threadId);
             await _client.DeleteThreadAsync(threadId);
 
@@ -72,7 +73,7 @@ namespace AIAssistant.Assistants
                 
                 _pendingRequests.Remove(threadId);
 
-                if (!_activeThreads.Contains(threadId))
+                if (_deletedThreads.Contains(threadId))
                 {
                     return;
                 }
@@ -183,7 +184,7 @@ namespace AIAssistant.Assistants
 
                             allActions.Clear();
 
-                            if (!_activeThreads.Contains(currentRun.ThreadId))
+                            if (_deletedThreads.Contains(currentRun.ThreadId))
                             {
                                 break;
                             }

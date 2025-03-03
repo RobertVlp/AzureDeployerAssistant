@@ -145,6 +145,38 @@ function ChatBox() {
         }
     }, [messages]);
 
+    useEffect(() => {
+        const fetchChats = async () => {
+            try {
+                const response = await fetch('http://localhost:7151/api/GetChatHistory');
+                if (!response.ok) throw new Error(response.status + response.statusText);
+                const data = await response.json();
+                
+                if (Object.keys(data).length > 0) {
+                    for (const [threadId, messages] of Object.entries(data)) {
+                        const chatMessages = [];
+
+                        for (const message of messages) {
+                            chatMessages.push({
+                                text: message.Message,
+                                type: message.Role
+                            });
+                        }
+
+                        setChats(prevChats => ({
+                            ...prevChats,
+                            [threadId]: chatMessages
+                        }));
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to fetch chat history:', error);
+            }
+        };
+
+        fetchChats();
+    }, []);
+
     return (
         <Container fluid className={darkMode ? 'dark-mode' : ''} style={{ display: 'flex', justifyContent: 'center' }}>
             <Button 

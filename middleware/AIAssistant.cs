@@ -110,7 +110,11 @@ namespace AIAssistant
             {
                 using var capturingStream = new CapturingStream(response.Body);
                 await RunAction(data, capturingStream);
-                await SaveChatMessagesAsync(data.ThreadId!, "assistant", capturingStream.CapturedData);
+                
+                if (!_assistant.DeletedThreads.Contains(data.ThreadId!))
+                {
+                    await SaveChatMessagesAsync(data.ThreadId!, "assistant", capturingStream.CapturedData);
+                }
             }
             catch (Exception ex)
             {
