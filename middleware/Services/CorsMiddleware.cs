@@ -1,7 +1,7 @@
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Middleware;
 
-namespace AIAssistant.Middleware;
+namespace AIAssistant.Services;
 
 public class CorsMiddleware : IFunctionsWorkerMiddleware
 {

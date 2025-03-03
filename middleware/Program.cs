@@ -1,5 +1,5 @@
 using AIAssistant.Assistants;
-using AIAssistant.Middleware;
+using AIAssistant.Services;
 using AIAssistant.Models;
 using Microsoft.Azure.Functions.Worker.Builder;
 using Microsoft.Extensions.DependencyInjection;
@@ -64,6 +64,7 @@ if (Environment.GetEnvironmentVariable("ASSISTANT_ID") is null)
 builder.ConfigureServices(services =>
 {
     services.AddSingleton<IAssistant, OpenAIAssistant>();
+    services.AddSingleton<DbService>();
 });
 
 // Application Insights isn't enabled by default. See https://aka.ms/AAt8mw4.

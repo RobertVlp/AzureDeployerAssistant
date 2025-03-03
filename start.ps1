@@ -16,26 +16,37 @@ function Start-InNewTerminal {
     Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd $Path; $Command"
 }
 
+function Test-Service {
+    param (
+        [string]$ServiceName,
+        [int]$Port
+    )
+
+    $isRunning = $false
+    $retry = 10
+
+    while ($isRunning -eq $false -and $retry -gt 0) {
+        $retry--
+        $isRunning = Test-NetConnection -ComputerName "localhost" -Port $Port -InformationLevel Quiet
+        Start-Sleep -Seconds 1
+    }
+
+    if ($isRunning -eq $false) {
+        Write-Host "$ServiceName failed to start"
+        exit
+    }
+}
+
 Write-Host "Starting Middleware..."
 Start-InNewTerminal -Path $middlewarePath -Command $middlewareRunCommand
-
-$middlewareStarted = $false
-$timeout = 0
-while ($middlewareStarted -eq $false -and $timeout -lt 10) {
-    $timeout++
-    $middlewareStarted = Test-NetConnection -ComputerName "localhost" -Port 7151 -InformationLevel Quiet
-    Start-Sleep -Seconds 1
-}
-
-if ($middlewareStarted -eq $false) {
-    Write-Host "Middleware failed to start"
-    exit
-}
-
-Write-Host "Starting Frontend..."
-Start-InNewTerminal -Path $frontendPath -Command $frontendRunCommand
+Test-Service -ServiceName "Middleware" -Port 7151
 
 Write-Host "Starting Backend..."
 Start-InNewTerminal -Path $backendPath -Command $backendRunCommand
+Test-Service -ServiceName "Backend" -Port 5000
+
+Write-Host "Starting Frontend..."
+Start-InNewTerminal -Path $frontendPath -Command $frontendRunCommand
+Test-Service -ServiceName "Frontend" -Port 3000
 
 Write-Host "App started!"

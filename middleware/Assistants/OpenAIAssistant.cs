@@ -100,8 +100,13 @@ namespace AIAssistant.Assistants
                 (string runId, _) = value;
                 _pendingRequests.Remove(threadId);
 
-                await _client.CancelRunAsync(threadId, runId);
-                await _client.CreateMessageAsync(threadId, MessageRole.Assistant, ["The action has been cancelled."]);
+                var run = await _client.GetRunAsync(threadId, runId);
+
+                if (run.Value.Status != RunStatus.Expired)
+                {
+                    await _client.CancelRunAsync(threadId, runId);
+                    await _client.CreateMessageAsync(threadId, MessageRole.Assistant, ["The action has been cancelled."]);
+                }
             }
         }
 
@@ -109,12 +114,16 @@ namespace AIAssistant.Assistants
         {
             _logger.LogInformation("Calling tool {name} with arguments {arguments}.", name, arguments);
 
-            HttpClient client = new();
+            HttpClient client = new()
+            {
+                Timeout = TimeSpan.FromSeconds(300),
+            };
+
             string body = JsonSerializer.Serialize(new { name, arguments });
 
             HttpRequestMessage request = new(HttpMethod.Get, "http://localhost:5000/api/v1/tools")
             {
-                Content = new StringContent(body, Encoding.UTF8, "application/json")
+                Content = new StringContent(body, Encoding.UTF8, "application/json"),
             };
 
             HttpResponseMessage response = await client.SendAsync(request);

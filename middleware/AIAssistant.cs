@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using AIAssistant.Services;
 using AIAssistant.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -10,10 +11,19 @@ using Microsoft.Extensions.Logging;
 
 namespace AIAssistant
 {
-    public class AIAssistant(ILogger<AIAssistant> logger, IAssistant assistant)
+    public class AIAssistant
     {
-        private readonly ILogger<AIAssistant> _logger = logger;
-        private readonly IAssistant _assistant = assistant;
+        private readonly ILogger<AIAssistant> _logger;
+        private readonly IAssistant _assistant;
+        private readonly DbService _dbClient;
+
+        public AIAssistant(ILogger<AIAssistant> logger, IAssistant assistant, DbService dbClient)
+        {
+            _logger = logger;
+            _assistant = assistant;
+            _dbClient = dbClient;
+            _dbClient.InitializeDatabase();
+        }
 
         [Function("CreateThread")]
         public async Task<ContentResult> CreateThreadAsync([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequest req)
@@ -40,8 +50,9 @@ namespace AIAssistant
             
             try
             {
-                AssistantRequest data = await ParseRequestBody(req);
+                AssistantRequest data = await ParseRequestBodyAsync(req);
                 string message = await _assistant.DeleteThreadAsync(data);
+                await _dbClient.DeleteChatHistoryAsync(data.ThreadId!);
                 return CreateResponse(HttpStatusCode.OK, JsonSerializer.Serialize(message));
             }
             catch (Exception ex)
@@ -53,7 +64,7 @@ namespace AIAssistant
         }
 
         [Function("InvokeAssistant")]
-        public async Task<HttpResponseData> RunAsync([HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequestData req)
+        public async Task<HttpResponseData> InvokeAssistantAsync([HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequestData req)
         {
             _logger.LogInformation("Assistant received a new request.");
             return await RunAssistantAsync(req, _assistant.StreamResponseAsync);
@@ -66,45 +77,68 @@ namespace AIAssistant
             return await RunAssistantAsync(req, _assistant.ConfirmActionAsync);
         }
 
-        private async Task<HttpResponseData> RunAssistantAsync(HttpRequestData req, Func<AssistantRequest, Stream, Task> RunAction)
+        [Function("GetChatHistory")]
+        public async Task<ContentResult> GetChatHistoryAsync([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequest req)
         {
+            _logger.LogInformation("Retrieving chat history.");
+
             try
             {
-                AssistantRequest data = await ParseRequestBody(req);
-                HttpResponseData? response = req.CreateResponse();
-
-                response.Headers.Add("Content-Type", "text/event-stream");
-                response.Headers.Add("Cache-Control", "no-cache");
-                response.Headers.Add("Connection", "keep-alive");
-                response.StatusCode = HttpStatusCode.OK;
-
-                try
-                {
-                    await RunAction(data, response.Body);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error during streaming.");
-
-                    var errorData = $"data: {{ \"error\": \"{ex.Message.Replace("\n", "\\n")}\" }}\n\n";
-                    await response.Body.WriteAsync(Encoding.UTF8.GetBytes(errorData));
-                }
-
-                return response;
+                var chatHistory = await _dbClient.GetChatHistoryAsync();
+                return CreateResponse(HttpStatusCode.OK, JsonSerializer.Serialize(chatHistory));
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "An error occurred while processing the request.");
-                
-                var errorResponse = req.CreateResponse(HttpStatusCode.BadRequest);
-                await errorResponse.WriteAsJsonAsync(new { error = $"An error occurred: {ex.Message}" });
-                return errorResponse;
+                _logger.LogError(ex, "Failed to retrieve chat history.");
+                string error = $"Failed to retrieve chat history: {ex.Message}";
+                return CreateResponse(HttpStatusCode.BadRequest, JsonSerializer.Serialize(new { error }));
             }
         }
 
-        private static async Task<AssistantRequest> ParseRequestBody(HttpRequestData req)
+        private async Task<HttpResponseData> RunAssistantAsync(HttpRequestData req, Func<AssistantRequest, Stream, Task> RunAction)
+        {
+            AssistantRequest data = await ParseRequestBodyAsync(req);
+            await SaveChatMessagesAsync(data.ThreadId!, "user", data.Prompt!);
+            HttpResponseData response = req.CreateResponse();
+
+            response.Headers.Add("Content-Type", "text/event-stream");
+            response.Headers.Add("Cache-Control", "no-cache");
+            response.Headers.Add("Connection", "keep-alive");
+            response.StatusCode = HttpStatusCode.OK;
+
+            try
+            {
+                using var capturingStream = new CapturingStream(response.Body);
+                await RunAction(data, capturingStream);
+                await SaveChatMessagesAsync(data.ThreadId!, "assistant", capturingStream.CapturedData);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during streaming.");
+                var errorMessage = $"Error during streaming: {ex.Message}\n";
+                await response.Body.WriteAsync(Encoding.UTF8.GetBytes(errorMessage));
+            }
+
+            return response;
+        }
+
+        private async Task SaveChatMessagesAsync(string threadId, string role, string message)
+        {
+            await _dbClient.SaveChatMessageAsync(
+                new ChatMessage()
+                {
+                    ThreadId = threadId,
+                    Role = role,
+                    Message = message,
+                    Timestamp = DateTime.Now.ToString("o")
+                }
+            );
+        }
+
+        private static async Task<AssistantRequest> ParseRequestBodyAsync(HttpRequestData req)
         {
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
+
             AssistantRequest data = JsonSerializer.Deserialize<AssistantRequest>(requestBody)
                 ?? throw new BadHttpRequestException("Invalid request: body is empty.");
 
