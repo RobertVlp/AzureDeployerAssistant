@@ -108,19 +108,16 @@ namespace AIAssistant
 
             try
             {
-                using var capturingStream = new CapturingStream(response.Body);
+                var capturingStream = new CapturingStream(response.Body);
                 await RunAction(data, capturingStream);
-                
-                if (!_assistant.DeletedThreads.Contains(data.ThreadId!))
-                {
-                    await SaveChatMessagesAsync(data.ThreadId!, "assistant", capturingStream.CapturedData);
-                }
+                await SaveChatMessagesAsync(data.ThreadId!, "assistant", capturingStream.CapturedData);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during streaming.");
-                var errorMessage = $"Error during streaming: {ex.Message}\n";
+                var errorMessage = $"Error: {ex.Message}\n";
                 await response.Body.WriteAsync(Encoding.UTF8.GetBytes(errorMessage));
+                await SaveChatMessagesAsync(data.ThreadId!, "assistant", errorMessage);
             }
 
             return response;
@@ -128,15 +125,18 @@ namespace AIAssistant
 
         private async Task SaveChatMessagesAsync(string threadId, string role, string message)
         {
-            await _dbClient.SaveChatMessageAsync(
-                new ChatMessage()
-                {
-                    ThreadId = threadId,
-                    Role = role,
-                    Message = message,
-                    Timestamp = DateTime.Now.ToString("o")
-                }
-            );
+            if (!_assistant.DeletedThreads.Contains(threadId))
+            {
+                await _dbClient.SaveChatMessageAsync(
+                    new ChatMessage()
+                    {
+                        ThreadId = threadId,
+                        Role = role,
+                        Message = message,
+                        Timestamp = DateTime.Now.ToString("o")
+                    }
+                );
+            }
         }
 
         private static async Task<AssistantRequest> ParseRequestBodyAsync(HttpRequestData req)

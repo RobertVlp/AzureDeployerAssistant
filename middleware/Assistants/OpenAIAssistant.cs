@@ -50,7 +50,6 @@ namespace AIAssistant.Assistants
         {
             (string threadId, string prompt) = request;
             (string runId, Queue<RequiredActionUpdate> pendingRequests) = _pendingRequests[threadId];
-            List<ToolOutput> outputs = [];
 
             var run = await _client.GetRunAsync(threadId, runId);
 
@@ -64,11 +63,12 @@ namespace AIAssistant.Assistants
 
             if (prompt.Trim().ToLower().Equals("yes"))
             {
+                List<Task<ToolOutput>> tasks = [];
+
                 while (pendingRequests.Count > 0)
                 {
                     RequiredActionUpdate actionUpdate = pendingRequests.Dequeue();
-                    string output = await CallToolAsync(actionUpdate.FunctionName, actionUpdate.FunctionArguments);
-                    outputs.Add(new ToolOutput(actionUpdate.ToolCallId, output));
+                    tasks.Add(CallToolAsync(actionUpdate));
                 }
                 
                 _pendingRequests.Remove(threadId);
@@ -78,11 +78,18 @@ namespace AIAssistant.Assistants
                     return;
                 }
 
-                await ProcessStreamingUpdatesAsync(
-                    _client.SubmitToolOutputsToRunStreamingAsync(threadId, runId, outputs),
-                    responseStream,
-                    []
-                );
+                List<ToolOutput> outputs = [.. await Task.WhenAll(tasks)];
+
+                var updates = _client.SubmitToolOutputsToRunStreamingAsync(threadId, runId, outputs);
+
+                try
+                {
+                    await HandleUpdatesAsync(responseStream, updates);
+                }
+                catch (Exception ex)
+                {
+                    await HandleExceptionOnUpdatesAsync(responseStream, threadId, ex);
+                }
             }
             else
             {
@@ -111,8 +118,11 @@ namespace AIAssistant.Assistants
             }
         }
 
-        private async Task<string> CallToolAsync(string name, string arguments)
+        private async Task<ToolOutput> CallToolAsync(RequiredActionUpdate actionUpdate)
         {
+            string name = actionUpdate.FunctionName;
+            string arguments = actionUpdate.FunctionArguments;
+
             _logger.LogInformation("Calling tool {name} with arguments {arguments}.", name, arguments);
 
             HttpClient client = new()
@@ -131,84 +141,114 @@ namespace AIAssistant.Assistants
 
             if (response.StatusCode != HttpStatusCode.OK && response.StatusCode != HttpStatusCode.InternalServerError)
             {
-                throw new Exception($"Failed to call tool {name}: {response.ReasonPhrase}");
+                return new ToolOutput(actionUpdate.ToolCallId, $"Failed to call tool {name}: {response.ReasonPhrase}");
             }
 
             var jsonResponse = JObject.Parse(await response.Content.ReadAsStringAsync());
 
             return response.StatusCode switch
             {
-                HttpStatusCode.OK => jsonResponse["response"]?.ToString() ?? string.Empty,
-                _ => throw new Exception(jsonResponse["error"]?.ToString())
+                HttpStatusCode.OK => new ToolOutput(actionUpdate.ToolCallId, jsonResponse["response"]?.ToString()),
+                _ => new ToolOutput(actionUpdate.ToolCallId, jsonResponse["error"]?.ToString())
             };
         }
 
         public async Task StreamResponseAsync(AssistantRequest request, Stream responseStream)
         {
             (string threadId, string prompt) = request;
-            await CancelPendingActionsAsync(threadId);
 
+            await CancelPendingActionsAsync(threadId);
             await _client.CreateMessageAsync(threadId, MessageRole.User, [prompt]);
 
             var updates = _client.CreateRunStreamingAsync(threadId, _assistant.Id);
-            Queue<RequiredActionUpdate> pendingRequests = [];
-            List<RequiredActionUpdate> allActions = [];
-            ThreadRun? currentRun = null;
 
             try
             {
-                do
-                {
-                    (currentRun, bool hasConfirmationActions) = await ProcessStreamingUpdatesAsync(updates, responseStream, allActions);
-
-                    if (currentRun != null && allActions.Count > 0)
-                    {
-                        if (hasConfirmationActions)
-                        {
-                            allActions.ForEach(pendingRequests.Enqueue);
-                            await WriteConfirmationMessageAsync(responseStream, pendingRequests);
-                            if (currentRun != null)
-                            {
-                                _pendingRequests[currentRun.ThreadId] = (currentRun.Id, pendingRequests);
-                            }
-                            break;
-                        }
-                        else
-                        {
-                            List<ToolOutput> outputs = [];
-                            foreach (var action in allActions)
-                            {
-                                string output = await CallToolAsync(action.FunctionName, action.FunctionArguments);
-                                outputs.Add(new ToolOutput(action.ToolCallId, output));
-                            }
-
-                            allActions.Clear();
-
-                            if (_deletedThreads.Contains(currentRun.ThreadId))
-                            {
-                                break;
-                            }
-
-                            updates = _client.SubmitToolOutputsToRunStreamingAsync(currentRun.ThreadId, currentRun.Id, outputs);
-                        }
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-                while (currentRun?.Status.IsTerminal == false);
+                await HandleUpdatesAsync(responseStream, updates);
             }
-            catch (OperationCanceledException)
+            catch (Exception ex)
             {
-                var timeoutMessage = Encoding.UTF8.GetBytes("\nThe request timed out. Please try again.");
-                await responseStream.WriteAsync(timeoutMessage);
-                _logger.LogWarning("Request timed out.");
+                await HandleExceptionOnUpdatesAsync(responseStream, threadId, ex);
             }
             finally
             {
                 await responseStream.FlushAsync();
             }
+        }
+
+        private async Task HandleExceptionOnUpdatesAsync(Stream responseStream, string threadId, Exception ex)
+        {
+            await CancelThreadRunsAsync(threadId);
+
+            if (ex is OperationCanceledException)
+            {
+                var timeoutMessage = Encoding.UTF8.GetBytes("\nThe request timed out. Please try again.");
+                await responseStream.WriteAsync(timeoutMessage);
+                _logger.LogWarning("Request timed out.");
+            }
+            else
+            {
+                throw ex;
+            }
+        }
+
+        private async Task CancelThreadRunsAsync(string threadId)
+        {
+            _logger.LogInformation("Exception was thrown, cancelling all runs for thread {threadId}.", threadId);
+
+            var runs = _client.GetRunsAsync(threadId);
+
+            if (runs != null)
+            {
+                await foreach (ThreadRun run in runs)
+                {
+                    if (run.Status != RunStatus.Expired && run.Status != RunStatus.Completed)
+                    {
+                        await _client.CancelRunAsync(threadId, run.Id);
+                    }
+                }
+            }
+        }
+
+        private async Task HandleUpdatesAsync(Stream responseStream, AsyncCollectionResult<StreamingUpdate> updates)
+        {            
+            Queue<RequiredActionUpdate> pendingRequests = [];
+            List<RequiredActionUpdate> allActions = [];
+            ThreadRun? currentRun = null;
+
+            do
+            {
+                (currentRun, bool hasConfirmationActions) = await ProcessStreamingUpdatesAsync(updates, responseStream, allActions);
+
+                if (currentRun != null && allActions.Count > 0)
+                {
+                    if (hasConfirmationActions)
+                    {
+                        allActions.ForEach(pendingRequests.Enqueue);
+                        await WriteConfirmationMessageAsync(responseStream, pendingRequests);
+                        _pendingRequests[currentRun.ThreadId] = (currentRun.Id, pendingRequests);
+                        break;
+                    }
+                    else
+                    {
+                        List<Task<ToolOutput>> tasks = [.. allActions.Select(CallToolAsync)];
+                        allActions.Clear();
+
+                        if (_deletedThreads.Contains(currentRun.ThreadId))
+                        {
+                            break;
+                        }
+
+                        List<ToolOutput> outputs = [.. await Task.WhenAll(tasks)];
+                        updates = _client.SubmitToolOutputsToRunStreamingAsync(currentRun.ThreadId, currentRun.Id, outputs);
+                    }
+                }
+                else
+                {
+                    break;
+                }
+            }
+            while (currentRun?.Status.IsTerminal == false);
         }
 
         private static async Task<(ThreadRun? currentRun, bool hasConfirmationActions)> ProcessStreamingUpdatesAsync(

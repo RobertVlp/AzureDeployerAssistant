@@ -1,0 +1,106 @@
+{
+  "name": "remove_access_policies",
+  "description": "Remove access policies for an existing key vault.",
+  "strict": false,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "resource_group_name": {
+        "type": "string",
+        "description": "The name of the resource group containing the key vault."
+      },
+      "key_vault_name": {
+        "type": "string",
+        "description": "The name of the key vault."
+      },
+      "policies": {
+        "type": "array",
+        "description": "List of access policies to remove.",
+        "items": {
+          "type": "object",
+          "properties": {
+            "object_id": {
+              "type": "string",
+              "description": "The unique object ID of the user, group, or application in Azure AD."
+            },
+            "tenant_id": {
+              "type": "string",
+              "description": "The tenant ID of the user, group, or application in Azure AD."
+            },
+            "keys": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "get",
+                  "list",
+                  "create",
+                  "delete",
+                  "update",
+                  "import",
+                  "backup",
+                  "restore",
+                  "recover",
+                  "purge"
+                ]
+              },
+              "description": "Key-related permissions to be removed."
+            },
+            "secrets": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "get",
+                  "list",
+                  "set",
+                  "delete",
+                  "backup",
+                  "restore",
+                  "recover",
+                  "purge"
+                ]
+              },
+              "description": "Secret-related permissions to be removed."
+            },
+            "certificates": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "get",
+                  "list",
+                  "create",
+                  "import",
+                  "delete",
+                  "backup",
+                  "restore",
+                  "managecontacts",
+                  "manageissuers",
+                  "getissuers",
+                  "listissuers",
+                  "setissuers",
+                  "deleteissuers",
+                  "recover",
+                  "purge"
+                ]
+              },
+              "description": "Certificate-related permissions to be removed."
+            }
+          },
+          "required": [
+            "object_id",
+            "tenant_id"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    "required": [
+      "resource_group_name",
+      "key_vault_name",
+      "policies"
+    ],
+    "additionalProperties": false
+  }
+}
