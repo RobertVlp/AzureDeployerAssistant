@@ -4,6 +4,8 @@ from azure.mgmt.compute import ComputeManagementClient
 from azure.mgmt.network import NetworkManagementClient
 from azure.mgmt.compute.models import DiskCreateOptionTypes
 from assistant.network.NetworkManager import NetworkManager
+from concurrent.futures import ThreadPoolExecutor, wait
+from azure.core.exceptions import ResourceNotFoundError
 
 class VirtualMachineManager:
     def __init__(self, credential, subscription_id):
@@ -148,17 +150,35 @@ class VirtualMachineManager:
             return self.network_client.network_interfaces.get(resource_group_name, nic_name)
 
     def delete_virtual_machine(self, resource_group_name, vm_name):
+        def delete_resource(delete_func, *args):
+            try:
+                delete_func(*args).wait()
+            except ResourceNotFoundError:
+                pass
+        
         try:
             # Remove the virtual machine
-            self.client.virtual_machines.begin_delete(resource_group_name, vm_name).result()
+            delete_resource(
+                self.client.virtual_machines.begin_delete,
+                resource_group_name,
+                vm_name
+            )
+
             # Remove the network interface
-            self.network_client.network_interfaces.begin_delete(resource_group_name, f'{vm_name}NIC').result()
-            # Remove the public IP address
-            self.network_client.public_ip_addresses.begin_delete(resource_group_name, f'{vm_name}PublicIP').result()
-            # Remove the virtual network
-            self.network_manager.delete_virtual_network(resource_group_name, f'{vm_name}VNet')
-            # Remove the disk
-            self.client.disks.begin_delete(resource_group_name, f'{vm_name}OsDisk').result()
+            delete_resource(
+                self.network_client.network_interfaces.begin_delete,
+                resource_group_name,
+                f'{vm_name}NIC'
+            )
+
+            with ThreadPoolExecutor(max_workers=3) as executor:
+                futures = [
+                    executor.submit(delete_resource, self.network_client.public_ip_addresses.begin_delete, resource_group_name, f'{vm_name}PublicIP'),
+                    executor.submit(delete_resource, self.network_manager.delete_virtual_network, resource_group_name, f'{vm_name}VNet'),
+                    executor.submit(delete_resource, self.client.disks.begin_delete, resource_group_name, f'{vm_name}OsDisk'),
+                ]
+
+                wait(futures)
 
             return f"Virtual machine {vm_name} deleted."
         except Exception as e:
