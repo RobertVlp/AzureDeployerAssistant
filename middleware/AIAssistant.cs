@@ -98,7 +98,8 @@ namespace AIAssistant
         private async Task<HttpResponseData> RunAssistantAsync(HttpRequestData req, Func<AssistantRequest, Stream, Task> RunAction)
         {
             AssistantRequest data = await ParseRequestBodyAsync(req);
-            await SaveChatMessagesAsync(data.ThreadId!, "user", data.Prompt!);
+            ChatMessage userMessage = new(data.ThreadId!, "user", data.Prompt!, DateTime.Now.ToString("o"));
+            ChatMessage? assistantMessage = null;
             HttpResponseData response = req.CreateResponse();
 
             response.Headers.Add("Content-Type", "text/event-stream");
@@ -110,31 +111,30 @@ namespace AIAssistant
             {
                 var capturingStream = new CapturingStream(response.Body);
                 await RunAction(data, capturingStream);
-                await SaveChatMessagesAsync(data.ThreadId!, "assistant", capturingStream.CapturedData);
+                assistantMessage = new ChatMessage(data.ThreadId!, "assistant", capturingStream.CapturedData, DateTime.Now.ToString("o"));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during streaming.");
                 var errorMessage = $"Error: {ex.Message}\n";
+                assistantMessage = new ChatMessage(data.ThreadId!, "assistant", errorMessage, DateTime.Now.ToString("o"));
                 await response.Body.WriteAsync(Encoding.UTF8.GetBytes(errorMessage));
-                await SaveChatMessagesAsync(data.ThreadId!, "assistant", errorMessage);
+            }
+            finally
+            {
+                await SaveChatMessagesAsync(userMessage, assistantMessage!);
             }
 
             return response;
         }
 
-        private async Task SaveChatMessagesAsync(string threadId, string role, string message)
+        private async Task SaveChatMessagesAsync(ChatMessage userMessage, ChatMessage assistantMessage)
         {
-            if (!_assistant.DeletedThreads.Contains(threadId))
+            if (!_assistant.DeletedThreads.Contains(userMessage.ThreadId))
             {
-                await _dbClient.SaveChatMessageAsync(
-                    new ChatMessage()
-                    {
-                        ThreadId = threadId,
-                        Role = role,
-                        Message = message,
-                        Timestamp = DateTime.Now.ToString("o")
-                    }
+                await Task.WhenAll(
+                    _dbClient.SaveChatMessageAsync(userMessage),
+                    _dbClient.SaveChatMessageAsync(assistantMessage)
                 );
             }
         }

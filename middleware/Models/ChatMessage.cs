@@ -1,19 +1,18 @@
-using System.Text.Json.Serialization;
-
 namespace AIAssistant.Models
 {
     public class ChatMessage
     {
-        [JsonPropertyName("threadId")]
-        public required string ThreadId { get; set; }
+        public string ThreadId { get; set; }
+        public string Role { get; set; }
+        public string Message { get; set; }
+        public string Timestamp { get; set; }
 
-        [JsonPropertyName("role")]
-        public required string Role { get; set; }
-        
-        [JsonPropertyName("message")]
-        public required string Message { get; set; }
-
-        [JsonPropertyName("timestamp")]
-        public required string Timestamp { get; set; }
+        public ChatMessage(string threadId, string role, string message, string timestamp)
+        {
+            ThreadId = threadId;
+            Role = role;
+            Message = message;
+            Timestamp = timestamp;
+        }
     }
 }

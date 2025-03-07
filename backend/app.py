@@ -30,11 +30,11 @@ available_functions = assistant.get_available_functions()
 def after_request(response: Response):
     response.headers.add('Access-Control-Allow-Origin', 'http://localhost:7151')
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET')
+    response.headers.add('Access-Control-Allow-Methods', 'POST')
 
     return response
 
-@app.route('/api/v1/tools', methods=['GET'])
+@app.route('/api/v1/tools', methods=['POST'])
 def call_tool():
     data = request.json
 

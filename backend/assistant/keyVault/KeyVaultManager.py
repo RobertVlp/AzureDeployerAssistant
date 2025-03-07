@@ -98,8 +98,8 @@ class KeyVaultManager:
                         current_policies.remove(existing_policy)
 
                 if not isChanged:
-                    response += f"No changes made for object_id {policy['object_id']} and tenant_id {policy['tenant_id']}.
-                                    Please specify which permissions to remove.\n"
+                    response += f"""No changes made for object_id {policy['object_id']} and tenant_id {policy['tenant_id']}.
+                                    Please specify which permissions to remove.\n"""
                 else:
                     response += f"Permissions removed for object_id {policy['object_id']} and tenant_id {policy['tenant_id']}.\n"
 

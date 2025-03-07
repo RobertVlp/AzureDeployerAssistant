@@ -46,6 +46,29 @@ namespace AIAssistant.Assistants
             return $"The thread with id {threadId} has been deleted.";
         }
 
+        public async Task StreamResponseAsync(AssistantRequest request, Stream responseStream)
+        {
+            (string threadId, string prompt) = request;
+
+            await CancelPendingActionsAsync(threadId);
+            await _client.CreateMessageAsync(threadId, MessageRole.User, [prompt]);
+
+            var updates = _client.CreateRunStreamingAsync(threadId, _assistant.Id);
+
+            try
+            {
+                await HandleUpdatesAsync(responseStream, updates);
+            }
+            catch (Exception ex)
+            {
+                await HandleExceptionOnUpdatesAsync(responseStream, threadId, ex);
+            }
+            finally
+            {
+                await responseStream.FlushAsync();
+            }
+        }
+
         public async Task ConfirmActionAsync(AssistantRequest request, Stream responseStream)
         {
             (string threadId, string prompt) = request;
@@ -132,7 +155,7 @@ namespace AIAssistant.Assistants
 
             string body = JsonSerializer.Serialize(new { name, arguments });
 
-            HttpRequestMessage request = new(HttpMethod.Get, "http://localhost:5000/api/v1/tools")
+            HttpRequestMessage request = new(HttpMethod.Post, "http://localhost:5000/api/v1/tools")
             {
                 Content = new StringContent(body, Encoding.UTF8, "application/json"),
             };
@@ -151,29 +174,6 @@ namespace AIAssistant.Assistants
                 HttpStatusCode.OK => new ToolOutput(actionUpdate.ToolCallId, jsonResponse["response"]?.ToString()),
                 _ => new ToolOutput(actionUpdate.ToolCallId, jsonResponse["error"]?.ToString())
             };
-        }
-
-        public async Task StreamResponseAsync(AssistantRequest request, Stream responseStream)
-        {
-            (string threadId, string prompt) = request;
-
-            await CancelPendingActionsAsync(threadId);
-            await _client.CreateMessageAsync(threadId, MessageRole.User, [prompt]);
-
-            var updates = _client.CreateRunStreamingAsync(threadId, _assistant.Id);
-
-            try
-            {
-                await HandleUpdatesAsync(responseStream, updates);
-            }
-            catch (Exception ex)
-            {
-                await HandleExceptionOnUpdatesAsync(responseStream, threadId, ex);
-            }
-            finally
-            {
-                await responseStream.FlushAsync();
-            }
         }
 
         private async Task HandleExceptionOnUpdatesAsync(Stream responseStream, string threadId, Exception ex)
