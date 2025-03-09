@@ -31,7 +31,11 @@ function MessageList({ messages, onConfirmAction }) {
                         style={{ borderRadius: '1.25em' }}
                     >
                         {msg.isLoading ? (
-                            <Spinner animation="grow" size="sm" />
+                            msg.isThinking ? (
+                                <span className="thinking-animation">Thinking</span>
+                            ) : (
+                                <Spinner animation="grow" size="sm" />
+                            )
                         ) : (
                             msg.type === 'user' ? (
                                 msg.text

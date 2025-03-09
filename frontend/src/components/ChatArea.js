@@ -4,7 +4,7 @@ import MessageList from './MessageList';
 import ChatInput from './ChatInput';
 
 function ChatArea({ messages, setMessages, handleActionAsync, isWaitingReply, darkMode }) {
-    const handleSubmitAsync = async (inputMessage) => {
+    const handleSubmitAsync = async (inputMessage, model) => {
         if (inputMessage) {
             const serverUrl = 'http://localhost:7151/api/InvokeAssistant';
 
@@ -14,7 +14,7 @@ function ChatArea({ messages, setMessages, handleActionAsync, isWaitingReply, da
             }
             
             setMessages([...messages, { text: inputMessage, type: 'user' }]);
-            await handleActionAsync(inputMessage, serverUrl);
+            await handleActionAsync(inputMessage, serverUrl, model);
         }
     };
 
@@ -22,7 +22,7 @@ function ChatArea({ messages, setMessages, handleActionAsync, isWaitingReply, da
         const serverUrl = 'http://localhost:7151/api/ConfirmAction';
         messages[messages.length - 1].isPending = false;
         setMessages([...messages]);
-        await handleActionAsync(action, serverUrl);
+        await handleActionAsync(action, serverUrl, "");
     };
 
     return (

@@ -30,7 +30,7 @@ function ChatBox() {
             await fetch(`http://localhost:7151/api/DeleteThread`, {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ "threadId": threadId, "prompt": "" })
+                body: JSON.stringify({ "threadId": threadId, "prompt": "", "model": "" })
             });
         } catch (error) {
             console.error('Failed to delete thread:', error);
@@ -72,7 +72,7 @@ function ChatBox() {
         activeThreadRef.current = await createThreadAsync();
     };
 
-    const handleActionAsync = async (action, url) => {
+    const handleActionAsync = async (action, url, model) => {
         if (!activeThreadRef.current) {
             waitingFirstMessageRef.current = true;
             await initializeChat();
@@ -82,11 +82,11 @@ function ChatBox() {
         const threadId = activeThreadRef.current;
         setWaitingReply(prev => ({ ...prev, [threadId]: true }));
 
-        const streamingMessage = { text: '', type: 'assistant', isLoading: true };
+        const streamingMessage = { text: '', type: 'assistant', isLoading: true, isThinking: model === 'o3-mini' };
         setMessages(prev => [...prev, streamingMessage]);
 
         try {
-            await handleChatResponseStream(url, threadId, action, streamingMessage);
+            await handleChatResponseStream(url, threadId, action, streamingMessage, model);
         } catch (error) {
             streamingMessage.isLoading = false;
             streamingMessage.text = `An error occurred while processing your request: ${error}`;
@@ -96,13 +96,14 @@ function ChatBox() {
         }
     };
 
-    const handleChatResponseStream = async (url, threadId, action, streamingMessage) => {
+    const handleChatResponseStream = async (url, threadId, action, streamingMessage, model) => {
         const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 threadId: threadId,
-                prompt: action
+                prompt: action,
+                model: model
             })
         });
 

@@ -5,15 +5,18 @@ namespace AIAssistant.Models
     public class AssistantRequest
     {
         [JsonPropertyName("threadId")]
-        public string? ThreadId { get; set; }
+        public required string ThreadId { get; set; }
         
         [JsonPropertyName("prompt")]
-        public string? Prompt { get; set; }
+        public required string Prompt { get; set; }
+
+        [JsonPropertyName("model")]
+        public required string Model { get; set; }
 
         public void Deconstruct(out string threadId, out string prompt)
         {
-            threadId = ThreadId ?? string.Empty;
-            prompt = Prompt ?? string.Empty;
+            threadId = ThreadId;
+            prompt = Prompt;
         }
     }
 }

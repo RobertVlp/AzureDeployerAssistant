@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
+using System.ClientModel;
 
 namespace AIAssistant
 {
@@ -51,9 +52,14 @@ namespace AIAssistant
             try
             {
                 AssistantRequest data = await ParseRequestBodyAsync(req);
+                await _dbClient.DeleteChatHistoryAsync(data.ThreadId);
                 string message = await _assistant.DeleteThreadAsync(data);
-                await _dbClient.DeleteChatHistoryAsync(data.ThreadId!);
                 return CreateResponse(HttpStatusCode.OK, JsonSerializer.Serialize(message));
+            }
+            catch (ClientResultException)
+            {
+                _logger.LogInformation("Thread already deleted.");
+                return CreateResponse(HttpStatusCode.OK, JsonSerializer.Serialize("Thread already deleted."));
             }
             catch (Exception ex)
             {
@@ -98,9 +104,15 @@ namespace AIAssistant
         private async Task<HttpResponseData> RunAssistantAsync(HttpRequestData req, Func<AssistantRequest, Stream, Task> RunAction)
         {
             AssistantRequest data = await ParseRequestBodyAsync(req);
-            ChatMessage userMessage = new(data.ThreadId!, "user", data.Prompt!, DateTime.Now.ToString("o"));
+            ChatMessage userMessage = new(data.ThreadId, "user", data.Prompt, DateTime.Now.ToString("o"));
             ChatMessage? assistantMessage = null;
             HttpResponseData response = req.CreateResponse();
+
+            if (data.Model != AssistantHelper.CurrentModel)
+            {
+                _logger.LogInformation("Updating the assistant model to: {Model}", data.Model);
+                await AssistantHelper.UpdateAssistantModelAsync(data.Model);
+            }
 
             response.Headers.Add("Content-Type", "text/event-stream");
             response.Headers.Add("Cache-Control", "no-cache");
@@ -111,13 +123,13 @@ namespace AIAssistant
             {
                 var capturingStream = new CapturingStream(response.Body);
                 await RunAction(data, capturingStream);
-                assistantMessage = new ChatMessage(data.ThreadId!, "assistant", capturingStream.CapturedData, DateTime.Now.ToString("o"));
+                assistantMessage = new ChatMessage(data.ThreadId, "assistant", capturingStream.CapturedData, DateTime.Now.ToString("o"));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during streaming.");
                 var errorMessage = $"Error: {ex.Message}\n";
-                assistantMessage = new ChatMessage(data.ThreadId!, "assistant", errorMessage, DateTime.Now.ToString("o"));
+                assistantMessage = new ChatMessage(data.ThreadId, "assistant", errorMessage, DateTime.Now.ToString("o"));
                 await response.Body.WriteAsync(Encoding.UTF8.GetBytes(errorMessage));
             }
             finally

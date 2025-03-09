@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Form, InputGroup, Button } from 'react-bootstrap';
-import { FaPaperPlane } from 'react-icons/fa';
+import { FaLightbulb, FaPaperPlane } from 'react-icons/fa';
 
 function ChatInput({ onSubmit, isWaitingReply, darkMode }) {
     const [inputMessage, setInputMessage] = useState('');
+    const [model, setModel] = useState('gpt-4o-mini');
     const textareaRef = useRef(null);
 
     const handleSubmitAsync = async (event) => {
@@ -11,7 +12,7 @@ function ChatInput({ onSubmit, isWaitingReply, darkMode }) {
         const message = inputMessage.trim();
         if (message && !isWaitingReply) {
             setInputMessage('');
-            await onSubmit(message);
+            await onSubmit(message, model);
         }
     };
 
@@ -34,10 +35,16 @@ function ChatInput({ onSubmit, isWaitingReply, darkMode }) {
         }
     }, [inputMessage]);
 
+    const handleInputGroupClick = () => {
+        if (textareaRef.current) {
+            textareaRef.current.focus();
+        }
+    };
+
     return (
         <div className="chat-input-container">
             <Form onSubmit={handleSubmitAsync} className="d-flex justify-content-center">
-                <InputGroup className="input-group-width">
+                <InputGroup className="input-group-width" onClick={handleInputGroupClick}>
                     <Form.Control
                         as="textarea"
                         rows={1}
@@ -49,13 +56,24 @@ function ChatInput({ onSubmit, isWaitingReply, darkMode }) {
                         style={{ overflowY: 'auto'}}
                         onKeyDown={handleKeyDown}
                     />
-                    <Button 
-                        type="submit" 
-                        variant={darkMode ? 'light' : 'dark'} 
-                        disabled={isWaitingReply}
-                    >
-                        <FaPaperPlane/>
-                    </Button>
+                    <div className='input-group-buttons mt-2'>
+                        <Button
+                            type="button"
+                            onClick={() => setModel(model === 'gpt-4o-mini' ? 'o3-mini' : 'gpt-4o-mini')}
+                            className={`think-toggle-button ${model === 'o3-mini' ? 'active' : ''}`}
+                            disabled={isWaitingReply}
+                        >
+                            <FaLightbulb style={{ marginRight: '2px' }}/> Think
+                        </Button>
+                        <Button 
+                            type="submit" 
+                            variant={darkMode ? 'light' : 'dark'} 
+                            disabled={isWaitingReply}
+                            className='send-button'
+                        >
+                            <FaPaperPlane/>
+                        </Button>
+                    </div>
                 </InputGroup>
             </Form>
         </div>

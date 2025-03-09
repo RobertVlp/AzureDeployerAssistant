@@ -59,9 +59,19 @@ messages-container::-webkit-scrollbar-track {
 }
 
 .input-group-width {
+    display: flex !important;
+    flex-direction: column !important;
     max-width: 80%;
     margin-bottom: 8px;
     margin-top: 16px;
+    border: 2px solid #ccc !important;
+    border-radius: 1.25em !important;
+    overflow: hidden;
+    padding-top: 2px;
+}
+
+.dark-mode .input-group-width {
+    border-color: #303030 !important;
 }
 
 .user-message, .assistant-message {
@@ -87,8 +97,9 @@ messages-container::-webkit-scrollbar-track {
 
 .input-group-width textarea {
     resize: none;
-    width: 100%;
+    width: 100% !important;
     max-height: 100px;
+    border: none !important;
 }
 
 .page-heading {
@@ -169,15 +180,8 @@ messages-container::-webkit-scrollbar-track {
 }
 
 .input-group-width .form-control:focus {
-    border-color: #4b4b4b;
-    box-shadow: 0 0 0 0.1rem rgba(75, 75, 75, 0.25);
-}
-
-.dark-mode .input-group-width .form-control:focus {
-    border-color: #6c757d;
-    box-shadow: 0 0 0 0.1rem rgba(108, 117, 125, 0.25);
-    background-color: #181818;
-    color: #ffffff;
+    border-color: none !important;
+    box-shadow: 0 0 0 0rem !important;
 }
 
 .dark-mode .assistant-response code {
@@ -224,12 +228,6 @@ messages-container::-webkit-scrollbar-track {
 
 .dark-mode .theme-toggle-button:hover {
     background-color: #3a3a3a;
-}
-
-/* Add smooth transition for theme switching */
-body, .chat-box, .user-message, .assistant-message, 
-.input-group textarea, .theme-toggle-button {
-    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .chat-layout {
@@ -349,4 +347,71 @@ body, .chat-box, .user-message, .assistant-message,
 
 .dark-mode .input-group textarea::-webkit-scrollbar-thumb {
     background-color: #555;
+}
+
+.think-toggle-button {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border: 1.5px solid #ccc !important;
+    border-radius: 100px !important;
+}
+
+.dark-mode .think-toggle-button {
+    background-color: #181818 !important;
+    color: #ffffff !important;
+    border-color: #303030 !important;
+}
+
+.think-toggle-button.active {
+    background-color: #e6c619 !important;
+    color: #000000 !important;
+    border-color: #e6c619 !important;
+}
+
+.input-group-buttons {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 10px;
+}
+
+.send-button {
+    display: flex !important;
+    padding: 10px !important;
+    justify-content: center !important;
+    align-items: center !important;
+    border-radius: 100px !important;
+}
+
+.thinking-animation {
+    display: inline-block;
+    background: linear-gradient(-45deg, #e6c619, #000000);
+    background-size: 400% 400%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: gradientAnimation 1s ease infinite;
+}
+
+.dark-mode .thinking-animation {
+    background: linear-gradient(-45deg, #e6c619, #ffffff);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+@keyframes gradientAnimation {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
 }

@@ -1,18 +1,23 @@
 using OpenAI.Assistants;
 using Newtonsoft.Json.Linq;
+using System.Text.Json;
 
 namespace AIAssistant.Services;
 
 public class AssistantHelper
 {
+    public static string? CurrentModel { get; private set; }
+
     public static void InitializeAssistant()
     {
+        #pragma warning disable OPENAI001
         var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") 
             ?? throw new InvalidOperationException("OPENAI_API_KEY is not set.");
 
+        var client = new AssistantClient(apiKey);
+
         if (Environment.GetEnvironmentVariable("ASSISTANT_ID") is null)
         {
-            #pragma warning disable OPENAI001
             string[] files = Directory.GetFiles("..\\..\\functions");
 
             if (files.Length == 0)
@@ -21,8 +26,9 @@ public class AssistantHelper
             }
 
             var assistantOptions = ConfigureAssistantOptions(files);
-            var client = new AssistantClient(apiKey);
             var assistant = client.CreateAssistant("gpt-4o-mini", assistantOptions).Value;
+
+            CurrentModel = assistant.Model;
 
             var settingsPath = "..\\..\\local.settings.json";
             var settings = JObject.Parse(File.ReadAllText(settingsPath));
@@ -30,6 +36,15 @@ public class AssistantHelper
             settings["Values"]!["ASSISTANT_ID"] = assistant.Id;
             File.WriteAllText(settingsPath, settings.ToString());
             Environment.SetEnvironmentVariable("ASSISTANT_ID", assistant.Id);
+        }
+        else
+        {
+            CurrentModel = client.GetAssistant(Environment.GetEnvironmentVariable("ASSISTANT_ID")).Value.Model;
+
+            if (CurrentModel != "gpt-4o-mini")
+            {
+                UpdateAssistantModelAsync("gpt-4o-mini").Wait();
+            }
         }
     }
 
@@ -64,5 +79,30 @@ public class AssistantHelper
         }
 
         return assistantOptions;
+    }
+
+    public static async Task UpdateAssistantModelAsync(string model)
+    {
+        var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") 
+            ?? throw new InvalidOperationException("OPENAI_API_KEY is not set.");
+
+        var assistantId = Environment.GetEnvironmentVariable("ASSISTANT_ID") 
+            ?? throw new InvalidOperationException("ASSISTANT_ID is not set.");
+
+        // If this is a reasoning model
+        var httpClient = new HttpClient();
+        httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
+        httpClient.DefaultRequestHeaders.Add("OpenAI-Beta", "assistants=v2");
+        var reasoning_effort = model.StartsWith('o') ? "high" : null;
+        
+        var content = new StringContent(
+            JsonSerializer.Serialize(new { model, reasoning_effort }),
+            System.Text.Encoding.UTF8, 
+            "application/json"
+        );
+
+        await httpClient.PostAsync($"https://api.openai.com/v1/assistants/{assistantId}", content);
+
+        CurrentModel = model;
     }
 }
