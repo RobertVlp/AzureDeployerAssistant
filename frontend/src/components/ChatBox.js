@@ -152,14 +152,14 @@ function ChatBox() {
                 const response = await fetch('http://localhost:7151/api/GetChatHistory');
                 if (!response.ok) throw new Error(response.status + response.statusText);
                 const data = await response.json();
-                
+
                 if (Object.keys(data).length > 0) {
                     for (const [threadId, messages] of Object.entries(data)) {
                         const chatMessages = [];
 
                         for (const message of messages) {
                             chatMessages.push({
-                                text: message.Message,
+                                text: message.Text,
                                 type: message.Role
                             });
                         }

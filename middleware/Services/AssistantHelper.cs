@@ -1,22 +1,24 @@
 using OpenAI.Assistants;
 using Newtonsoft.Json.Linq;
 using System.Text.Json;
+using System.ClientModel;
+using System.Net;
 
 namespace AIAssistant.Services;
 
 public class AssistantHelper
 {
     public static string? CurrentModel { get; private set; }
+    private static string ApiKey => Environment.GetEnvironmentVariable("OPENAI_API_KEY")
+        ?? throw new InvalidOperationException("OPENAI_API_KEY is not set.");
 
     public static void InitializeAssistant()
     {
         #pragma warning disable OPENAI001
-        var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") 
-            ?? throw new InvalidOperationException("OPENAI_API_KEY is not set.");
+        var client = new AssistantClient(ApiKey);
+        var assistantId = Environment.GetEnvironmentVariable("ASSISTANT_ID");
 
-        var client = new AssistantClient(apiKey);
-
-        if (Environment.GetEnvironmentVariable("ASSISTANT_ID") is null)
+        if (assistantId is null)
         {
             string[] files = Directory.GetFiles("..\\..\\functions");
 
@@ -39,9 +41,9 @@ public class AssistantHelper
         }
         else
         {
-            CurrentModel = client.GetAssistant(Environment.GetEnvironmentVariable("ASSISTANT_ID")).Value.Model;
+            CurrentModel = client.GetAssistant(assistantId).Value.Model;
 
-            if (CurrentModel != "gpt-4o-mini")
+            if (!CurrentModel.Equals("gpt-4o-mini"))
             {
                 UpdateAssistantModelAsync("gpt-4o-mini").Wait();
             }
@@ -83,15 +85,11 @@ public class AssistantHelper
 
     public static async Task UpdateAssistantModelAsync(string model)
     {
-        var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") 
-            ?? throw new InvalidOperationException("OPENAI_API_KEY is not set.");
-
         var assistantId = Environment.GetEnvironmentVariable("ASSISTANT_ID") 
             ?? throw new InvalidOperationException("ASSISTANT_ID is not set.");
 
-        // If this is a reasoning model
         var httpClient = new HttpClient();
-        httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
+        httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {ApiKey}");
         httpClient.DefaultRequestHeaders.Add("OpenAI-Beta", "assistants=v2");
         var reasoning_effort = model.StartsWith('o') ? "high" : null;
         
@@ -104,5 +102,48 @@ public class AssistantHelper
         await httpClient.PostAsync($"https://api.openai.com/v1/assistants/{assistantId}", content);
 
         CurrentModel = model;
+    }
+
+    public static async Task UpdateChatHistoryThreadsAsync(Dictionary<string, List<dynamic>> chatHistory, DbService dbClient)
+    {
+        var client = new AssistantClient(ApiKey);
+        var expiredThreads = new List<string>();
+        Dictionary<string, List<dynamic>> updatedThreads = [];
+
+        foreach (var (threadId, messages) in chatHistory)
+        {
+            try
+            {
+                await client.GetThreadAsync(threadId);
+            }
+            catch (ClientResultException ex) when (ex.Status == (int) HttpStatusCode.NotFound)
+            {
+                var newThread = await client.CreateThreadAsync();
+
+                messages.ForEach(async message =>
+                {
+                    await client.CreateMessageAsync(
+                        newThread.Value.Id,
+                        message.Role.Equals("user") ? MessageRole.User : MessageRole.Assistant,
+                        [message.Text]
+                    );
+                });
+
+                expiredThreads.Add(threadId);
+                updatedThreads.Add(newThread.Value.Id, messages);
+                await dbClient.UpdateChatThreadsAsync(threadId, newThread.Value.Id);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
+        expiredThreads.ForEach(threadId => chatHistory.Remove(threadId));
+        
+        foreach (var (threadId, messages) in updatedThreads)
+        {
+            chatHistory.Add(threadId, messages);
+        }
     }
 }

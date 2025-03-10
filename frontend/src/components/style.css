@@ -326,6 +326,7 @@ messages-container::-webkit-scrollbar-track {
 
 .chat-container-main {
     flex: 1;
+    max-width: 75%;
 }
 
 .input-group textarea::-webkit-scrollbar {

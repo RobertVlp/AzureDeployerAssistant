@@ -10,11 +10,11 @@ public class DbService(ILogger<DbService> logger)
     private readonly ILogger<DbService> _logger = logger;
     private readonly SqliteConnection _connection = new($"Data Source={Environment.GetEnvironmentVariable("DB_PATH")}");
 
-    public async Task<Dictionary<string, List<object>>> GetChatHistoryAsync()
+    public async Task<Dictionary<string, List<dynamic>>> GetChatHistoryAsync()
     {
         _logger.LogInformation("Getting chat history from the database.");
 
-        Dictionary<string, List<object>> chatHistory = [];
+        Dictionary<string, List<dynamic>> chatHistory = [];
 
         var command = 
         @"
@@ -30,13 +30,13 @@ public class DbService(ILogger<DbService> logger)
             {
                 var threadId = message.ThreadId;
 
-                if (!chatHistory.TryGetValue(threadId, out List<object>? value))
+                if (!chatHistory.TryGetValue(threadId, out List<dynamic>? value))
                 {
                     value = [];
                     chatHistory[threadId] = value;
                 }
 
-                value.Add(new { message.Role, message.Message, message.Timestamp });
+                value.Add(new { message.Role, message.Text, message.Timestamp });
             }
         }
         catch (Exception ex)
@@ -53,8 +53,8 @@ public class DbService(ILogger<DbService> logger)
 
         var command = 
         @"
-            INSERT INTO ChatMessages (ThreadId, Role, Message, Timestamp)
-            VALUES (@ThreadId, @Role, @Message, @Timestamp)
+            INSERT INTO ChatMessages (ThreadId, Role, Text, Timestamp)
+            VALUES (@ThreadId, @Role, @Text, @Timestamp)
         ";
 
         try
@@ -96,7 +96,7 @@ public class DbService(ILogger<DbService> logger)
             CREATE TABLE IF NOT EXISTS ChatMessages (
                 ThreadId TEXT NOT NULL,
                 Role TEXT NOT NULL,
-                Message TEXT NOT NULL,
+                Text TEXT NOT NULL,
                 Timestamp TIMESTAMP NOT NULL
             )
         ";
@@ -108,6 +108,27 @@ public class DbService(ILogger<DbService> logger)
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to initialize the database.");
+        }
+    }
+
+    public async Task UpdateChatThreadsAsync(string oldThreadId, string newThreadId)
+    {
+        _logger.LogInformation("Updating chat history for expired threadId {ThreadId} in the database.", oldThreadId);
+
+        var command = 
+        @"
+            UPDATE ChatMessages
+            SET ThreadId = @NewThreadId
+            WHERE ThreadId = @OldThreadId
+        ";
+
+        try
+        {
+            await _connection.ExecuteAsync(command, new { OldThreadId = oldThreadId, NewThreadId = newThreadId });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update chat history for expired threadId {ThreadId} in the database.", oldThreadId);
         }
     }
 }

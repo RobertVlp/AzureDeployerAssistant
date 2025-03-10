@@ -180,9 +180,9 @@ namespace AIAssistant.Assistants
         {
             await CancelThreadRunsAsync(threadId);
 
-            if (ex is OperationCanceledException)
+            if (ex is OperationCanceledException || ex is TaskCanceledException)
             {
-                var timeoutMessage = Encoding.UTF8.GetBytes("\nThe request timed out. Please try again.");
+                var timeoutMessage = Encoding.UTF8.GetBytes("\nSomething went wrong, the request timed out.");
                 await responseStream.WriteAsync(timeoutMessage);
                 _logger.LogWarning("Request timed out.");
             }

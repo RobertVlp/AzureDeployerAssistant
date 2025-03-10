@@ -48,7 +48,7 @@ namespace AIAssistant
         public async Task<ContentResult> DeleteThreadAsync([HttpTrigger(AuthorizationLevel.Anonymous, "delete")] HttpRequestData req)
         {
             _logger.LogInformation("Deleting an existing thread.");
-            
+
             try
             {
                 AssistantRequest data = await ParseRequestBodyAsync(req);
@@ -56,7 +56,7 @@ namespace AIAssistant
                 string message = await _assistant.DeleteThreadAsync(data);
                 return CreateResponse(HttpStatusCode.OK, JsonSerializer.Serialize(message));
             }
-            catch (ClientResultException)
+            catch (ClientResultException ex) when (ex.Status == (int) HttpStatusCode.NotFound)
             {
                 _logger.LogInformation("Thread already deleted.");
                 return CreateResponse(HttpStatusCode.OK, JsonSerializer.Serialize("Thread already deleted."));
@@ -91,6 +91,7 @@ namespace AIAssistant
             try
             {
                 var chatHistory = await _dbClient.GetChatHistoryAsync();
+                await AssistantHelper.UpdateChatHistoryThreadsAsync(chatHistory, _dbClient);
                 return CreateResponse(HttpStatusCode.OK, JsonSerializer.Serialize(chatHistory));
             }
             catch (Exception ex)
@@ -108,7 +109,7 @@ namespace AIAssistant
             ChatMessage? assistantMessage = null;
             HttpResponseData response = req.CreateResponse();
 
-            if (data.Model != AssistantHelper.CurrentModel)
+            if (!data.Model.Equals("") && !data.Model.Equals(AssistantHelper.CurrentModel))
             {
                 _logger.LogInformation("Updating the assistant model to: {Model}", data.Model);
                 await AssistantHelper.UpdateAssistantModelAsync(data.Model);
@@ -127,8 +128,19 @@ namespace AIAssistant
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error during streaming.");
-                var errorMessage = $"Error: {ex.Message}\n";
+                string errorMessage;
+
+                if (ex is IOException || ex is TimeoutException)
+                {
+                    _logger.LogWarning("Request timed out.");
+                    errorMessage = "Request timed out.\n";
+                }
+                else
+                {
+                    _logger.LogError(ex, "Error during streaming.");
+                    errorMessage = $"Error: {ex.Message}\n";
+                }
+
                 assistantMessage = new ChatMessage(data.ThreadId, "assistant", errorMessage, DateTime.Now.ToString("o"));
                 await response.Body.WriteAsync(Encoding.UTF8.GetBytes(errorMessage));
             }
