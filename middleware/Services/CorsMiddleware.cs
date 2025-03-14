@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Middleware;
 
@@ -7,19 +8,25 @@ public class CorsMiddleware : IFunctionsWorkerMiddleware
 {
     public async Task Invoke(FunctionContext context, FunctionExecutionDelegate next)
     {
-        var corsOrigin = Environment.GetEnvironmentVariable("Host:CORS");
-        var corsCredentials = bool.TryParse(Environment.GetEnvironmentVariable("Host:CORSCredentials"), out bool credentials) && credentials;
+        var corsOrigins = Environment.GetEnvironmentVariable("CORS_ORIGINS");
+        var origins = (corsOrigins?.Split(';') ?? []).ToHashSet();
+        var httpContext = context.GetHttpContext();
 
-        context.GetInvocationResult().Value = new
+        if (httpContext != null)
         {
-            Headers = new Dictionary<string, string>
+            var requestOrigin = httpContext.Request.Headers.Origin.FirstOrDefault();
+
+            if (requestOrigin is null || !origins.Contains(requestOrigin))
             {
-                { "Access-Control-Allow-Origin", corsOrigin ?? "*" },
-                { "Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS" },
-                { "Access-Control-Allow-Headers", "Content-Type" },
-                { "Access-Control-Allow-Credentials", corsCredentials.ToString().ToLower() }
+                httpContext.Response.StatusCode = StatusCodes.Status403Forbidden;
+                return;
             }
-        };
+
+            httpContext.Response.Headers.Append("Access-Control-Allow-Origin", requestOrigin);
+            httpContext.Response.Headers.Append("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
+            httpContext.Response.Headers.Append("Access-Control-Allow-Headers", "Content-Type");
+            httpContext.Response.Headers.Append("Access-Control-Allow-Credentials", "false");
+        }
 
         await next(context);
     }

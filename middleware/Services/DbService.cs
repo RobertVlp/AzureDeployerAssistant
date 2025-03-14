@@ -1,6 +1,6 @@
+using Npgsql;
 using Dapper;
 using AIAssistant.Models;
-using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 
 namespace AIAssistant.Services;
@@ -8,7 +8,8 @@ namespace AIAssistant.Services;
 public class DbService(ILogger<DbService> logger)
 {
     private readonly ILogger<DbService> _logger = logger;
-    private readonly SqliteConnection _connection = new($"Data Source={Environment.GetEnvironmentVariable("DB_PATH")}");
+    private readonly string _connectionString = Environment.GetEnvironmentVariable("DB_CONNECTION_STRING")
+        ?? throw new ArgumentNullException("DB_CONNECTION_STRING environment variable is not set.");
 
     public async Task<Dictionary<string, List<dynamic>>> GetChatHistoryAsync()
     {
@@ -19,12 +20,14 @@ public class DbService(ILogger<DbService> logger)
         var command = 
         @"
             SELECT * FROM ChatMessages
-            ORDER BY ThreadId, Timestamp   
+            ORDER BY ThreadId, Timestamp
         ";
 
         try
         {
-            var results = await _connection.QueryAsync<ChatMessage>(command);
+            using var connection = new NpgsqlConnection(_connectionString);
+            await connection.OpenAsync();
+            var results = await connection.QueryAsync<ChatMessage>(command);
 
             foreach (ChatMessage message in results)
             {
@@ -59,7 +62,9 @@ public class DbService(ILogger<DbService> logger)
 
         try
         {
-            await _connection.ExecuteAsync(command, message);
+            using var connection = new NpgsqlConnection(_connectionString);
+            await connection.OpenAsync();
+            await connection.ExecuteAsync(command, message);
         }
         catch (Exception ex)
         {
@@ -79,35 +84,13 @@ public class DbService(ILogger<DbService> logger)
 
         try
         {
-            await _connection.ExecuteAsync(command, new { ThreadId = threadId });
+            using var connection = new NpgsqlConnection(_connectionString);
+            await connection.OpenAsync();
+            await connection.ExecuteAsync(command, new { ThreadId = threadId });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to delete chat history for threadId {ThreadId} from the database.", threadId);
-        }
-    }
-
-    public void InitializeDatabase()
-    {
-        _logger.LogInformation("Initializing the database.");
-
-        var command = 
-        @"
-            CREATE TABLE IF NOT EXISTS ChatMessages (
-                ThreadId TEXT NOT NULL,
-                Role TEXT NOT NULL,
-                Text TEXT NOT NULL,
-                Timestamp TIMESTAMP NOT NULL
-            )
-        ";
-
-        try
-        {
-            _connection.Execute(command);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to initialize the database.");
         }
     }
 
@@ -124,7 +107,9 @@ public class DbService(ILogger<DbService> logger)
 
         try
         {
-            await _connection.ExecuteAsync(command, new { OldThreadId = oldThreadId, NewThreadId = newThreadId });
+            using var connection = new NpgsqlConnection(_connectionString);
+            await connection.OpenAsync();
+            await connection.ExecuteAsync(command, new { OldThreadId = oldThreadId, NewThreadId = newThreadId });
         }
         catch (Exception ex)
         {

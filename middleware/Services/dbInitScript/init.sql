@@ -1,0 +1,6 @@
+CREATE TABLE IF NOT EXISTS ChatMessages (
+    ThreadId TEXT NOT NULL,
+    Role TEXT NOT NULL,
+    Text TEXT NOT NULL,
+    Timestamp TIMESTAMP NOT NULL
+)

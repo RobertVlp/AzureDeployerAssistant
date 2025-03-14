@@ -2,7 +2,7 @@ $middlewarePath = ".\middleware"
 $middlewareRunCommand = "func host start --port 7151"
 
 $frontendPath = ".\frontend"
-$frontendRunCommand = "npm start"
+$frontendRunCommand = "npm run dev"
 
 $backendPath = ".\backend"
 $backendRunCommand = "flask run"

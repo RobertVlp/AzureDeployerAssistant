@@ -4,7 +4,6 @@ using System.Text.Json;
 using AIAssistant.Services;
 using AIAssistant.Models;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
@@ -23,29 +22,35 @@ namespace AIAssistant
             _logger = logger;
             _assistant = assistant;
             _dbClient = dbClient;
-            _dbClient.InitializeDatabase();
+        }
+
+        [Function("HandleOptionsRequest")]
+        public static HttpResponseData HandleOptionsAsync([HttpTrigger(AuthorizationLevel.Anonymous, "options", Route = "{*route}")] HttpRequestData req)
+        {
+            var response = req.CreateResponse(HttpStatusCode.NoContent);
+            return response;
         }
 
         [Function("CreateThread")]
-        public async Task<ContentResult> CreateThreadAsync([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequest req)
+        public async Task<HttpResponseData> CreateThreadAsync([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
         {
             _logger.LogInformation("Creating a new thread.");
 
             try
             {
                 string threadId = await _assistant.CreateThreadAsync();
-                return CreateResponse(HttpStatusCode.OK, JsonSerializer.Serialize(new { threadId }));
+                return await CreateResponse(req, HttpStatusCode.OK, JsonSerializer.Serialize(new { threadId }));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to create a new thread.");
                 string error = $"Failed to create a new thread: {ex.Message}";
-                return CreateResponse(HttpStatusCode.BadRequest, JsonSerializer.Serialize(new { error }));
+                return await CreateResponse(req, HttpStatusCode.BadRequest, JsonSerializer.Serialize(new { error }));
             }
         }
 
         [Function("DeleteThread")]
-        public async Task<ContentResult> DeleteThreadAsync([HttpTrigger(AuthorizationLevel.Anonymous, "delete")] HttpRequestData req)
+        public async Task<HttpResponseData> DeleteThreadAsync([HttpTrigger(AuthorizationLevel.Anonymous, "delete")] HttpRequestData req)
         {
             _logger.LogInformation("Deleting an existing thread.");
 
@@ -54,18 +59,18 @@ namespace AIAssistant
                 AssistantRequest data = await ParseRequestBodyAsync(req);
                 await _dbClient.DeleteChatHistoryAsync(data.ThreadId);
                 string message = await _assistant.DeleteThreadAsync(data);
-                return CreateResponse(HttpStatusCode.OK, JsonSerializer.Serialize(message));
+                return await CreateResponse(req, HttpStatusCode.OK, JsonSerializer.Serialize(message));
             }
             catch (ClientResultException ex) when (ex.Status == (int) HttpStatusCode.NotFound)
             {
                 _logger.LogInformation("Thread already deleted.");
-                return CreateResponse(HttpStatusCode.OK, JsonSerializer.Serialize("Thread already deleted."));
+                return await CreateResponse(req, HttpStatusCode.OK, JsonSerializer.Serialize("Thread already deleted."));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to delete the thread.");
                 string error = $"Failed to delete the thread: {ex.Message}";
-                return CreateResponse(HttpStatusCode.BadRequest, JsonSerializer.Serialize(new { error }));
+                return await CreateResponse(req, HttpStatusCode.BadRequest, JsonSerializer.Serialize(new { error }));
             }
         }
 
@@ -84,7 +89,7 @@ namespace AIAssistant
         }
 
         [Function("GetChatHistory")]
-        public async Task<ContentResult> GetChatHistoryAsync([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequest req)
+        public async Task<HttpResponseData> GetChatHistoryAsync([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
         {
             _logger.LogInformation("Retrieving chat history.");
 
@@ -92,20 +97,20 @@ namespace AIAssistant
             {
                 var chatHistory = await _dbClient.GetChatHistoryAsync();
                 await AssistantHelper.UpdateChatHistoryThreadsAsync(chatHistory, _dbClient);
-                return CreateResponse(HttpStatusCode.OK, JsonSerializer.Serialize(chatHistory));
+                return await CreateResponse(req, HttpStatusCode.OK, JsonSerializer.Serialize(chatHistory));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to retrieve chat history.");
                 string error = $"Failed to retrieve chat history: {ex.Message}";
-                return CreateResponse(HttpStatusCode.BadRequest, JsonSerializer.Serialize(new { error }));
+                return await CreateResponse(req, HttpStatusCode.BadRequest, JsonSerializer.Serialize(new { error }));
             }
         }
 
         private async Task<HttpResponseData> RunAssistantAsync(HttpRequestData req, Func<AssistantRequest, Stream, Task> RunAction)
         {
             AssistantRequest data = await ParseRequestBodyAsync(req);
-            ChatMessage userMessage = new(data.ThreadId, "user", data.Prompt, DateTime.Now.ToString("o"));
+            ChatMessage userMessage = new(data.ThreadId, "user", data.Prompt, DateTime.Now);
             ChatMessage? assistantMessage = null;
             HttpResponseData response = req.CreateResponse();
 
@@ -124,24 +129,14 @@ namespace AIAssistant
             {
                 var capturingStream = new CapturingStream(response.Body);
                 await RunAction(data, capturingStream);
-                assistantMessage = new ChatMessage(data.ThreadId, "assistant", capturingStream.CapturedData, DateTime.Now.ToString("o"));
+                assistantMessage = new ChatMessage(data.ThreadId, "assistant", capturingStream.CapturedData, DateTime.Now);
             }
             catch (Exception ex)
             {
-                string errorMessage;
+                _logger.LogError(ex, "Error during streaming.");
+                var errorMessage = $"Error: {ex.Message}\n";
 
-                if (ex is IOException || ex is TimeoutException)
-                {
-                    _logger.LogWarning("Request timed out.");
-                    errorMessage = "Request timed out.\n";
-                }
-                else
-                {
-                    _logger.LogError(ex, "Error during streaming.");
-                    errorMessage = $"Error: {ex.Message}\n";
-                }
-
-                assistantMessage = new ChatMessage(data.ThreadId, "assistant", errorMessage, DateTime.Now.ToString("o"));
+                assistantMessage = new ChatMessage(data.ThreadId, "assistant", errorMessage, DateTime.Now);
                 await response.Body.WriteAsync(Encoding.UTF8.GetBytes(errorMessage));
             }
             finally
@@ -173,14 +168,12 @@ namespace AIAssistant
             return data;
         }
 
-        private static ContentResult CreateResponse(HttpStatusCode statusCode, string message)
+        private static async Task<HttpResponseData> CreateResponse(HttpRequestData req, HttpStatusCode statusCode, string message)
         {
-            return new()
-            {
-                StatusCode = (int)statusCode,
-                Content = message,
-                ContentType = "application/json"
-            };
+            var response = req.CreateResponse(statusCode);
+            response.Headers.Add("Content-Type", "application/json");
+            await response.WriteStringAsync(message);
+            return response;
         }
     }
 }
