@@ -1,0 +1,51 @@
+services:
+  postgres:
+    container_name: postgres-container
+    image: postgres:14.17
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: ChatMessages
+    volumes:
+      - data:/var/lib/postgresql/data
+      - ./middleware/Services/dbInitScript/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  middleware:
+    container_name: middleware
+    build:
+      context: ./middleware/
+      dockerfile: Dockerfile
+    ports:
+      - "7151:80"
+    environment:
+      ASSISTANT_ID: ${ASSISTANT_ID}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      DB_CONNECTION_STRING: ${DB_CONNECTION_STRING}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+    depends_on:
+      - postgres
+
+  backend:
+    container_name: backend
+    build:
+      context: ./backend/
+      dockerfile: Dockerfile
+    environment:
+      AZURE_SUBSCRIPTION_ID: ${AZURE_SUBSCRIPTION_ID}
+      AZURE_ACCESS_TOKEN: ${AZURE_ACCESS_TOKEN}
+
+  frontend:
+    container_name: frontend
+    build:
+      context: ./frontend/
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - middleware
+
+volumes:
+  data:
+    name: postgres-data
