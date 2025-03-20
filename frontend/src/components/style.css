@@ -416,3 +416,25 @@ messages-container::-webkit-scrollbar-track {
         background-position: 0% 50%;
     }
 }
+
+.assistant-response table {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    display: block;
+    border-collapse: collapse;
+}
+
+.assistant-response pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.assistant-response table th,
+.assistant-response table td {
+    word-wrap: break-word;
+    white-space: normal;
+    padding: 8px;
+    border: 1px solid #ccc;
+    text-align: center;
+}
