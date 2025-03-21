@@ -1,3 +1,9 @@
+body {
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+}
+
 #root {
     min-height: 100vh;
     display: flex;
@@ -19,11 +25,8 @@
 .chat-box {
     height: 85vh;
     max-height: 85vh;
-    margin: 20px 10px;
-    padding: 10px;
     align-self: center;
     overflow-x: hidden;
-    overflow-y: auto;
     display: flex;
     flex-direction: column;
 }
@@ -31,17 +34,15 @@
 .messages-container {
     flex-grow: 1;
     overflow-x: hidden;
-    overflow-y: auto;
     scroll-behavior: smooth;
-    padding-right: 8px; /* Add some padding for the scrollbar */
 }
 
-/* Style the scrollbar for WebKit browsers */
+/* Add scrollbar styling for messages container */
 .messages-container::-webkit-scrollbar {
     width: 8px;
 }
 
-messages-container::-webkit-scrollbar-track {
+.messages-container::-webkit-scrollbar-track {
     background: transparent;
 }
 
@@ -56,14 +57,13 @@ messages-container::-webkit-scrollbar-track {
 
 .chat-input-container {
     padding-top: 16px;
+    margin: auto 20%;
 }
 
 .input-group-width {
     display: flex !important;
     flex-direction: column !important;
     max-width: 80%;
-    margin-bottom: 8px;
-    margin-top: 16px;
     border: 2px solid #ccc !important;
     border-radius: 1.25em !important;
     overflow: hidden;
@@ -83,7 +83,7 @@ messages-container::-webkit-scrollbar-track {
 .user-message {
     background-color: hsla(0,0%,91%,.5) !important;
     border-color: hsla(0,0%,91%,.5) !important;
-    max-width: 70%;
+    max-width: 70% !important;
     justify-self: right;
 }
 
@@ -91,8 +91,15 @@ messages-container::-webkit-scrollbar-track {
     justify-self: left;
 }
 
+.list-group {
+    display: grid !important;
+    margin: auto 10%;
+}
+
 .list-group-item {
     border: none !important;
+    overflow-x: auto;
+    max-width: 100%;
 }
 
 .input-group-width textarea {
@@ -100,6 +107,7 @@ messages-container::-webkit-scrollbar-track {
     width: 100% !important;
     max-height: 100px;
     border: none !important;
+    height: 45px !important;
 }
 
 .page-heading {
@@ -231,7 +239,7 @@ messages-container::-webkit-scrollbar-track {
 }
 
 .chat-layout {
-    display: flex;
+    display: inline-flex;
     width: 100%;
     max-width: 1500px;
     min-height: 85vh;
@@ -326,7 +334,6 @@ messages-container::-webkit-scrollbar-track {
 
 .chat-container-main {
     flex: 1;
-    max-width: 75%;
 }
 
 .input-group textarea::-webkit-scrollbar {

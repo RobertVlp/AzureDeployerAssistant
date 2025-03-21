@@ -155,7 +155,7 @@ namespace AIAssistant.Assistants
 
             string body = JsonSerializer.Serialize(new { name, arguments });
 
-            HttpRequestMessage request = new(HttpMethod.Post, "http://backend:5000/api/v1/tools")
+            HttpRequestMessage request = new(HttpMethod.Post, Environment.GetEnvironmentVariable("BACKEND_ENDPOINT"))
             {
                 Content = new StringContent(body, Encoding.UTF8, "application/json"),
             };

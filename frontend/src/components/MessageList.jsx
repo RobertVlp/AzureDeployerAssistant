@@ -17,13 +17,13 @@ function MessageList({ messages, onConfirmAction }) {
     useEffect(() => {
         const timer = setTimeout(() => {
             scrollToBottom();
-        }, 100);
+        }, 50);
         return () => clearTimeout(timer);
     }, [messages]);
 
     return (
         <div className="messages-container" ref={messageContainerRef}>
-            <ListGroup className='d-grid'>
+            <ListGroup>
                 {messages.map((msg, index) => (
                     <ListGroup.Item 
                         key={index} 

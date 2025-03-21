@@ -1,4 +1,4 @@
-import { Container, Button } from 'react-bootstrap';
+import { Button } from 'react-bootstrap';
 import React, { useState, useEffect, useRef, useContext } from 'react';
 import { BsMoonFill, BsSunFill } from 'react-icons/bs';
 import { ThemeContext } from '../App';
@@ -13,10 +13,11 @@ function ChatBox() {
     const [waitingReply, setWaitingReply] = useState({});
     const waitingFirstMessageRef = useRef(false);
     const activeThreadRef = useRef(null);
+    const apiUrl = `${import.meta.env.VITE_API_URL}` || '';
 
     const createThreadAsync = async () => {
         try {
-            const response = await fetch('http://localhost:7151/api/CreateThread');
+            const response = await fetch(`${apiUrl}/CreateThread`);
             if (!response.ok) throw new Error(response.status + response.statusText);
             const data = await response.json();
             return data.threadId;
@@ -27,7 +28,7 @@ function ChatBox() {
 
     const deleteThreadAsync = async (threadId) => {
         try {
-            await fetch(`http://localhost:7151/api/DeleteThread`, {
+            await fetch(`${apiUrl}/DeleteThread`, {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ "threadId": threadId, "prompt": "", "model": "" })
@@ -149,7 +150,7 @@ function ChatBox() {
     useEffect(() => {
         const fetchChats = async () => {
             try {
-                const response = await fetch('http://localhost:7151/api/GetChatHistory');
+                const response = await fetch(`${apiUrl}/GetChatHistory`);
                 if (!response.ok) throw new Error(response.status + response.statusText);
                 const data = await response.json();
 
@@ -179,7 +180,7 @@ function ChatBox() {
     }, []);
 
     return (
-        <Container fluid className={darkMode ? 'dark-mode' : ''} style={{ display: 'flex', justifyContent: 'center' }}>
+        <div fluid className={darkMode ? 'dark-mode' : ''} style={{ display: 'flex', justifyContent: 'center', alignItems: 'stretch' }}>
             <Button 
                 onClick={toggleDarkMode} 
                 className="theme-toggle-button"
@@ -188,8 +189,8 @@ function ChatBox() {
                 {darkMode ? <BsSunFill style={{ color: 'white' }}/> : <BsMoonFill />}
             </Button>
 
-            <div className="chat-layout">
-                <ChatSidebar 
+            <div fluid className="chat-layout">
+                <ChatSidebar
                     chats={chats}
                     activeThreadId={activeThreadRef.current}
                     onCreateNewChat={createNewChatAsync}
@@ -197,7 +198,7 @@ function ChatBox() {
                     onSelectChat={selectChat}
                 />
                 
-                <ChatArea 
+                <ChatArea
                     messages={messages}
                     setMessages={setMessages}
                     handleActionAsync={handleActionAsync}
@@ -205,7 +206,7 @@ function ChatBox() {
                     darkMode={darkMode}
                 />
             </div>
-        </Container>
+        </div>
     );
 }
 
