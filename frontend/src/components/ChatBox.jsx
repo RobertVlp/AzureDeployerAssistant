@@ -180,7 +180,7 @@ function ChatBox() {
     }, []);
 
     return (
-        <div fluid className={darkMode ? 'dark-mode' : ''} style={{ display: 'flex', justifyContent: 'center', alignItems: 'stretch' }}>
+        <div fluid="true" className={darkMode ? 'dark-mode' : ''} style={{ display: 'flex', justifyContent: 'center', alignItems: 'stretch' }}>
             <Button 
                 onClick={toggleDarkMode} 
                 className="theme-toggle-button"
@@ -189,7 +189,7 @@ function ChatBox() {
                 {darkMode ? <BsSunFill style={{ color: 'white' }}/> : <BsMoonFill />}
             </Button>
 
-            <div fluid className="chat-layout">
+            <div fluid="true" className="chat-layout">
                 <ChatSidebar
                     chats={chats}
                     activeThreadId={activeThreadRef.current}

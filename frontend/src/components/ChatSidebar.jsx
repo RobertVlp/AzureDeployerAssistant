@@ -20,8 +20,8 @@ function ChatSidebar({ chats, activeThreadId, onCreateNewChat, onDeleteChat, onS
                         className={`chat-item ${threadId === activeThreadId ? 'active' : ''}`}
                         onClick={() => onSelectChat(threadId)}
                     >
-                        <span>Chat {threadId.substring(0, 8)}...</span>
-                            <div 
+                        <span>Chat {threadId.substring(6, 15)}...</span>
+                            <div
                                 className="delete-chat-btn" 
                                 onClick={(e) => handleDeleteChat(e, threadId)}
                             >

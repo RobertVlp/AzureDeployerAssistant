@@ -8,7 +8,7 @@ namespace AIAssistant.Services;
 
 public class AssistantHelper
 {
-    public static string? CurrentModel { get; private set; }
+    public static string CurrentModel { get; private set; } = "gpt-4o-mini";
     private static string ApiKey => Environment.GetEnvironmentVariable("OPENAI_API_KEY")
         ?? throw new InvalidOperationException("OPENAI_API_KEY is not set.");
 

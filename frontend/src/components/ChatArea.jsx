@@ -20,7 +20,7 @@ function ChatArea({ messages, setMessages, handleActionAsync, isWaitingReply, da
     };
 
     const handleConfirmActionAsync = async (action) => {
-        const serverUrl = `${apiUrl}}/ConfirmAction`;
+        const serverUrl = `${apiUrl}/ConfirmAction`;
         messages[messages.length - 1].isPending = false;
         setMessages([...messages]);
         await handleActionAsync(action, serverUrl, "");

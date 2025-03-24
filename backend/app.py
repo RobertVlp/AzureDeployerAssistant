@@ -4,18 +4,11 @@ import logging
 
 from flask_cors import CORS
 from dotenv import load_dotenv
-from datetime import datetime, timedelta
 from assistant.Assistant import Assistant
-from azure.core.credentials import AccessToken
+from azure.identity import EnvironmentCredential
 from flask import Flask, Response, request, jsonify
 
 logging.basicConfig(level=logging.INFO)
-
-class StaticTokenCredential:
-    def get_token(self, *scopes):
-        token = os.getenv("AZURE_ACCESS_TOKEN")
-        expires_on = datetime.now() + timedelta(hours=4)
-        return AccessToken(token, int(expires_on.timestamp()))
 
 app = Flask(__name__)
 app.config['CORS_HEADERS'] = 'Content-Type'
@@ -29,7 +22,7 @@ if not subscription_id:
     logging.error("Azure subscription ID not found in environment variables.")
     exit(1)
 
-credential = StaticTokenCredential()
+credential = EnvironmentCredential()
 assistant = Assistant(credential, subscription_id)
 available_functions = assistant.get_available_functions()
 
