@@ -1,0 +1,59 @@
+.theme-toggle-button {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    border: none;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.theme-toggle-button:hover {
+    transform: scale(1.1);
+    transition: transform 0.2s ease;
+}
+
+.dark-mode .theme-toggle-button {
+    background-color: #2a2a2a;
+    color: #ffd700;
+    border: 1px solid #404040;
+}
+
+.dark-mode .theme-toggle-button:hover {
+    background-color: #3a3a3a;
+}
+
+.thinking-animation {
+    display: inline-block;
+    background: linear-gradient(-45deg, #e6c619, #000000);
+    background-size: 400% 400%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: gradientAnimation 1s ease infinite;
+}
+
+.dark-mode .thinking-animation {
+    background: linear-gradient(-45deg, #e6c619, #ffffff);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+@keyframes gradientAnimation {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}

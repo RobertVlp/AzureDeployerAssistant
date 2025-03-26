@@ -1,0 +1,100 @@
+.chat-input-container {
+    padding-top: 16px;
+    margin: auto 20%;
+}
+
+.input-group-width {
+    display: flex !important;
+    flex-direction: column !important;
+    max-width: 80%;
+    border: 2px solid #ccc !important;
+    border-radius: 1.25em !important;
+    overflow: hidden;
+    padding-top: 2px;
+}
+
+.dark-mode .input-group-width {
+    border-color: #303030 !important;
+}
+
+.input-group-width textarea {
+    resize: none;
+    width: 100% !important;
+    max-height: 100px;
+    border: none !important;
+    height: 45px !important;
+}
+
+.input-group-width .form-control:focus {
+    border-color: none !important;
+    box-shadow: 0 0 0 0rem !important;
+}
+
+.dark-mode .input-group textarea {
+    background-color: #181818;
+    color: #ffffff;
+    border-color: #303030;
+}
+
+.dark-mode .input-group textarea::placeholder {
+    color: #ffffff;
+}
+
+.input-group textarea::-webkit-scrollbar {
+    width: 8px;
+}
+
+.input-group textarea::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.input-group textarea::-webkit-scrollbar-thumb {
+    background-color: #888;
+    border-radius: 4px;
+}
+
+.input-group textarea::-webkit-scrollbar-button {
+    display: none;
+}
+
+.dark-mode .input-group textarea::-webkit-scrollbar-thumb {
+    background-color: #555;
+}
+
+.input-group-buttons {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 10px;
+}
+
+.send-button {
+    display: flex !important;
+    padding: 10px !important;
+    justify-content: center !important;
+    align-items: center !important;
+    border-radius: 100px !important;
+}
+
+.think-toggle-button {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border: 1.5px solid #ccc !important;
+    border-radius: 100px !important;
+}
+
+.dark-mode .think-toggle-button {
+    background-color: #181818 !important;
+    color: #ffffff !important;
+    border-color: #303030 !important;
+}
+
+.think-toggle-button.active {
+    background-color: #e6c619 !important;
+    color: #000000 !important;
+    border-color: #e6c619 !important;
+}

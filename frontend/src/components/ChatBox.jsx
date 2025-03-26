@@ -1,13 +1,8 @@
-import { Button } from 'react-bootstrap';
-import React, { useState, useEffect, useRef, useContext } from 'react';
-import { BsMoonFill, BsSunFill } from 'react-icons/bs';
-import { ThemeContext } from '../App';
+import React, { useState, useEffect, useRef } from 'react';
 import ChatSidebar from './ChatSidebar';
 import ChatArea from './ChatArea';
-import './style.css';
 
-function ChatBox() {
-    const { darkMode, setDarkMode } = useContext(ThemeContext);
+function ChatBox({ darkMode }) {
     const [messages, setMessages] = useState([]);
     const [chats, setChats] = useState({});
     const [waitingReply, setWaitingReply] = useState({});
@@ -134,10 +129,6 @@ function ChatBox() {
         }
     }
 
-    const toggleDarkMode = () => {
-        setDarkMode(!darkMode);
-    };
-
     useEffect(() => {
         if (activeThreadRef.current && messages.length > 0) {
             setChats(prevChats => ({
@@ -181,14 +172,6 @@ function ChatBox() {
 
     return (
         <div fluid="true" className={darkMode ? 'dark-mode' : ''} style={{ display: 'flex', justifyContent: 'center', alignItems: 'stretch' }}>
-            <Button 
-                onClick={toggleDarkMode} 
-                className="theme-toggle-button"
-                variant={darkMode ? 'dark' : 'light'}
-            >
-                {darkMode ? <BsSunFill style={{ color: 'white' }}/> : <BsMoonFill />}
-            </Button>
-
             <div fluid="true" className="chat-layout">
                 <ChatSidebar
                     chats={chats}
