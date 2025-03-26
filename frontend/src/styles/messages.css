@@ -1,0 +1,83 @@
+.user-message, .assistant-message {
+    margin: 5px 0;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+}
+
+.user-message {
+    background-color: hsla(0,0%,91%,.5) !important;
+    border-color: hsla(0,0%,91%,.5) !important;
+    max-width: 70% !important;
+    justify-self: right;
+}
+
+.assistant-message {
+    justify-self: left;
+}
+
+.list-group {
+    display: grid !important;
+    margin: auto 10%;
+}
+
+.list-group-item {
+    border: none !important;
+    overflow-x: auto;
+    max-width: 100%;
+}
+
+.assistant-response * {
+    margin-bottom: -15px;
+    max-width: 100%;
+}
+
+.assistant-response p {
+    margin-bottom: 0.25em !important;
+}
+
+.assistant-response ul, ol {
+    margin-top: -25px !important;
+}
+
+.assistant-response code {
+    background-color: inherit;
+    color:#000000;
+}
+
+.dark-mode .user-message {
+    border-color: rgba(50, 50, 50, .85) !important;
+    background-color: rgba(50,50,50,.85) !important;
+    color: #ffffff;
+}
+
+.dark-mode .assistant-message {
+    background-color: #181818 !important;
+    color: #ffffff;;
+}
+
+.dark-mode .assistant-response code {
+    background-color: inherit;
+    color: #ffffff;
+}
+
+.assistant-response table {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    display: block;
+    border-collapse: collapse;
+}
+
+.assistant-response pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.assistant-response table th,
+.assistant-response table td {
+    word-wrap: break-word;
+    white-space: normal;
+    padding: 8px;
+    border: 1px solid #ccc;
+    text-align: center;
+}

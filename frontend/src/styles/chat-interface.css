@@ -1,0 +1,55 @@
+.chat-interface {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 1px 0 16px 0;
+}
+
+.chat-box {
+    height: 85vh;
+    max-height: 85vh;
+    align-self: center;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.messages-container {
+    flex-grow: 1;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+}
+
+/* Add scrollbar styling for messages container */
+.messages-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.messages-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.messages-container::-webkit-scrollbar-thumb {
+    background-color: #888;
+    border-radius: 4px;
+}
+
+.dark-mode .messages-container::-webkit-scrollbar-thumb {
+    background-color: #555;
+}
+
+.chat-layout {
+    display: inline-flex;
+    width: 100%;
+    max-width: 1500px;
+    min-height: 85vh;
+}
+
+.chat-container-main {
+    flex: 1;
+}
+
+.dark-mode .chat-box {
+    background-color: #181818;
+    border-color: #303030;
+}

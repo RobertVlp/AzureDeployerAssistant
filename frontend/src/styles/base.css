@@ -1,0 +1,35 @@
+body {
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+}
+
+#root {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+#root > div {
+    min-height: 100vh;
+    flex: 1;
+}
+
+.page-heading {
+    font-size: 2.5rem;
+    color: 'dark';
+    text-align: center;
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+.dark-mode {
+    background-color: #181818;
+    color: #ffffff;
+    margin: 0;
+    padding: 0;
+}
+
+.dark-mode .page-heading {
+    color: #ffffff;
+}
