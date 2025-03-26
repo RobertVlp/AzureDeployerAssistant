@@ -24,6 +24,7 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       DB_CONNECTION_STRING: ${DB_CONNECTION_STRING}
       CORS_ORIGINS: ${CORS_ORIGINS}
+      BACKEND_ENDPOINT: ${BACKEND_ENDPOINT}
     depends_on:
       - postgres
 
@@ -34,7 +35,9 @@ services:
       dockerfile: Dockerfile
     environment:
       AZURE_SUBSCRIPTION_ID: ${AZURE_SUBSCRIPTION_ID}
-      AZURE_ACCESS_TOKEN: ${AZURE_ACCESS_TOKEN}
+      AZURE_TENANT_ID: ${AZURE_TENANT_ID}
+      AZURE_CLIENT_ID: ${AZURE_CLIENT_ID}
+      AZURE_CLIENT_SECRET: ${AZURE_CLIENT_SECRET}
 
   frontend:
     container_name: frontend
@@ -45,6 +48,8 @@ services:
       - "3000:3000"
     depends_on:
       - middleware
+    environment:
+      VITE_API_URL: ${VITE_API_URL}
 
 volumes:
   data:
