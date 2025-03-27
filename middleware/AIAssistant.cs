@@ -141,20 +141,23 @@ namespace AIAssistant
             }
             finally
             {
-                await SaveChatMessagesAsync(userMessage, assistantMessage!);
+                SaveChatMessages(userMessage, assistantMessage!);
             }
 
             return response;
         }
 
-        private async Task SaveChatMessagesAsync(ChatMessage userMessage, ChatMessage assistantMessage)
+        private void SaveChatMessages(ChatMessage userMessage, ChatMessage assistantMessage)
         {
             if (!_assistant.DeletedThreads.Contains(userMessage.ThreadId))
             {
-                await Task.WhenAll(
-                    _dbClient.SaveChatMessageAsync(userMessage),
-                    _dbClient.SaveChatMessageAsync(assistantMessage)
-                );
+                Task.Run(async () => 
+                {
+                    await Task.WhenAll(
+                        _dbClient.SaveChatMessageAsync(userMessage),
+                        _dbClient.SaveChatMessageAsync(assistantMessage)
+                    ).ConfigureAwait(false);
+                });
             }
         }
 

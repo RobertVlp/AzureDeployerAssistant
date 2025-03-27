@@ -67,7 +67,6 @@ const ChatInterface = () => {
             return remaining;
         });
 
-        delete waitingReply[threadId];
         await deleteThreadAsync(threadId);
     };
 
