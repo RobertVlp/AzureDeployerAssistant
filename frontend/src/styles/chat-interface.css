@@ -1,8 +1,6 @@
 .chat-interface {
     min-height: 100vh;
     display: flex;
-    flex-direction: column;
-    padding: 1px 0 16px 0;
 }
 
 .chat-box {
@@ -12,12 +10,35 @@
     overflow-x: hidden;
     display: flex;
     flex-direction: column;
+    flex: 1;
+}
+
+.chat-container {
+    order: 1;
+    flex: 1;
+}
+
+.chat-interface-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-height: 50px;
+    margin: 20px 0px;
 }
 
 .messages-container {
-    flex-grow: 1;
     overflow-x: hidden;
     scroll-behavior: smooth;
+}
+
+.placeholder-message {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: auto;
+    margin-bottom: 0;
+    font-size: 1.25em;
+    font-weight: 500;
 }
 
 /* Add scrollbar styling for messages container */
@@ -39,14 +60,9 @@
 }
 
 .chat-layout {
-    display: inline-flex;
+    display: flex;
     width: 100%;
-    max-width: 1500px;
     min-height: 85vh;
-}
-
-.chat-container-main {
-    flex: 1;
 }
 
 .dark-mode .chat-box {

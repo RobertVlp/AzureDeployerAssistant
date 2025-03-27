@@ -27,18 +27,21 @@ function ChatArea({ messages, setMessages, handleActionAsync, isWaitingReply, da
     };
 
     return (
-        <div className="chat-container-main">
-            <div className="chat-box">
-                <MessageList 
-                    messages={messages}
-                    onConfirmAction={handleConfirmActionAsync}
-                />
-                <ChatInput 
-                    onSubmit={handleSubmitAsync}
-                    isWaitingReply={isWaitingReply}
-                    darkMode={darkMode}
-                />
-            </div>
+        <div className="chat-box">
+            <MessageList 
+                messages={messages}
+                onConfirmAction={handleConfirmActionAsync}
+            />
+            { messages.length === 0 && (
+                <div className="placeholder-message">
+                    <span>Hi! How can I help you today?</span>
+                </div>
+            )}
+            <ChatInput 
+                onSubmit={handleSubmitAsync}
+                isWaitingReply={isWaitingReply}
+                darkMode={darkMode}
+            />
         </div>
     );
 }

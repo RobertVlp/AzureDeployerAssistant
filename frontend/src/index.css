@@ -5,6 +5,7 @@
 @import './styles/theme.css';
 @import './styles/sidebar.css';
 @import './styles/utilities.css';
+@import './styles/dropdown.css';
 
 body {
   margin: 0;

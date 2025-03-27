@@ -22,7 +22,7 @@ function MessageList({ messages, onConfirmAction }) {
     }, [messages]);
 
     return (
-        <div className="messages-container" ref={messageContainerRef}>
+        <div className="messages-container" ref={messageContainerRef} style={{ height: messages.length > 0 ? '100%' : 'auto'}}>
             <ListGroup>
                 {messages.map((msg, index) => (
                     <ListGroup.Item 
@@ -47,8 +47,8 @@ function MessageList({ messages, onConfirmAction }) {
                         )}
                         {msg.type === 'assistant' && msg.isPending && (
                             <Container className="d-flex">
-                                <Button className='confirm-action-button' variant="primary" onClick={() => onConfirmAction('Yes')}>Yes</Button>
-                                <Button className='confirm-action-button' variant="secondary" onClick={() => onConfirmAction('No')}>No</Button>
+                                <Button className='confirm-action-button' onClick={() => onConfirmAction('Yes')}>Yes</Button>
+                                <Button className='confirm-action-button' onClick={() => onConfirmAction('No')}>No</Button>
                             </Container>
                         )}
                     </ListGroup.Item>

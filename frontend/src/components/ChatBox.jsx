@@ -1,72 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import ChatSidebar from './ChatSidebar';
 import ChatArea from './ChatArea';
 
-function ChatBox({ darkMode }) {
-    const [messages, setMessages] = useState([]);
-    const [chats, setChats] = useState({});
+function ChatBox({ setChats, initializeChat, activeThreadRef, messages, setMessages, darkMode }) {
     const [waitingReply, setWaitingReply] = useState({});
     const waitingFirstMessageRef = useRef(false);
-    const activeThreadRef = useRef(null);
-    const apiUrl = `${import.meta.env.VITE_API_URL}` || '';
-
-    const createThreadAsync = async () => {
-        try {
-            const response = await fetch(`${apiUrl}/CreateThread`);
-            if (!response.ok) throw new Error(response.status + response.statusText);
-            const data = await response.json();
-            return data.threadId;
-        } catch (error) {
-            console.error('Failed to create thread:', error);
-        }
-    };
-
-    const deleteThreadAsync = async (threadId) => {
-        try {
-            await fetch(`${apiUrl}/DeleteThread`, {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ "threadId": threadId, "prompt": "", "model": "" })
-            });
-        } catch (error) {
-            console.error('Failed to delete thread:', error);
-        }
-    };
-
-    const createNewChatAsync = async () => {
-        const threadId = await createThreadAsync();
-        setChats(prevChats => ({
-            ...prevChats,
-            [threadId]: []
-        }));
-        selectChat(threadId);
-    };
-
-    const deleteChatAsync = async (threadId) => {
-        setChats(prevChats => {
-            const { [threadId]: removed, ...remaining } = prevChats;
-            
-            if (threadId === activeThreadRef.current) {
-                const remainingThreads = Object.keys(remaining);
-                activeThreadRef.current = remainingThreads[0];
-                selectChat(remainingThreads[0]);
-            }
-            
-            return remaining;
-        });
-
-        delete waitingReply[threadId];
-        await deleteThreadAsync(threadId);
-    };
-
-    const selectChat = (threadId) => {
-        activeThreadRef.current = threadId;
-        setMessages(chats[threadId] || []);
-    };
-
-    const initializeChat = async () => {
-        activeThreadRef.current = await createThreadAsync();
-    };
 
     const handleActionAsync = async (action, url, model) => {
         if (!activeThreadRef.current) {
@@ -138,57 +75,15 @@ function ChatBox({ darkMode }) {
         }
     }, [messages]);
 
-    useEffect(() => {
-        const fetchChats = async () => {
-            try {
-                const response = await fetch(`${apiUrl}/GetChatHistory`);
-                if (!response.ok) throw new Error(response.status + response.statusText);
-                const data = await response.json();
-
-                if (Object.keys(data).length > 0) {
-                    for (const [threadId, messages] of Object.entries(data)) {
-                        const chatMessages = [];
-
-                        for (const message of messages) {
-                            chatMessages.push({
-                                text: message.Text,
-                                type: message.Role
-                            });
-                        }
-
-                        setChats(prevChats => ({
-                            ...prevChats,
-                            [threadId]: chatMessages
-                        }));
-                    }
-                }
-            } catch (error) {
-                console.error('Failed to fetch chat history:', error);
-            }
-        };
-
-        fetchChats();
-    }, []);
-
     return (
-        <div fluid="true" className={darkMode ? 'dark-mode' : ''} style={{ display: 'flex', justifyContent: 'center', alignItems: 'stretch' }}>
-            <div fluid="true" className="chat-layout">
-                <ChatSidebar
-                    chats={chats}
-                    activeThreadId={activeThreadRef.current}
-                    onCreateNewChat={createNewChatAsync}
-                    onDeleteChat={deleteChatAsync}
-                    onSelectChat={selectChat}
-                />
-                
-                <ChatArea
-                    messages={messages}
-                    setMessages={setMessages}
-                    handleActionAsync={handleActionAsync}
-                    isWaitingReply={waitingReply[activeThreadRef.current] || waitingFirstMessageRef.current}
-                    darkMode={darkMode}
-                />
-            </div>
+        <div fluid="true" className="chat-layout">
+            <ChatArea
+                messages={messages}
+                setMessages={setMessages}
+                handleActionAsync={handleActionAsync}
+                isWaitingReply={waitingReply[activeThreadRef.current] || waitingFirstMessageRef.current}
+                darkMode={darkMode}
+            />
         </div>
     );
 }
