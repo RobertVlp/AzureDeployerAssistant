@@ -6,28 +6,33 @@ using OpenAI.Assistants;
 using Newtonsoft.Json.Linq;
 using System.Text.Json;
 using System.Net;
+using AIAssistant.Services;
 
 namespace AIAssistant.Assistants
 {
     #pragma warning disable OPENAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-    public class OpenAIAssistant : IAssistant
+    public class OpenAIAssistant(ILogger<IAssistant> logger) : IAssistant
     {
-        private readonly ILogger<IAssistant> _logger;
-        private readonly AssistantClient _client;
-        private readonly Assistant _assistant;
-        private readonly Dictionary<string, (string, Queue<RequiredActionUpdate>)> _pendingRequests;
-        private readonly HashSet<string> _deletedThreads;
+        private readonly ILogger<IAssistant> _logger = logger;
+        private readonly AssistantClient _client = new(Environment.GetEnvironmentVariable("OPENAI_API_KEY"));
+        private readonly Dictionary<string, (string, Queue<RequiredActionUpdate>)> _pendingRequests = [];
+        private readonly HashSet<string> _deletedThreads = [];
         private static readonly JsonSerializerOptions _jsonSerializerOptions = new() { WriteIndented = true };
+        private string _assistantId = AssistantHelper.DefaultAssistantId;
 
         public HashSet<string> DeletedThreads => _deletedThreads;
 
-        public OpenAIAssistant(ILogger<IAssistant> logger)
+        public string AssistantId
         {
-            _logger = logger;
-            _client = new(Environment.GetEnvironmentVariable("OPENAI_API_KEY"));
-            _assistant = _client.GetAssistant(Environment.GetEnvironmentVariable("ASSISTANT_ID"));
-            _pendingRequests = [];
-            _deletedThreads = [];
+            get => _assistantId;
+            set
+            {
+                if (string.IsNullOrEmpty(value))
+                {
+                    throw new ArgumentException("AssistantId cannot be null or empty.");
+                }
+                _assistantId = value;
+            }
         }
 
         public async Task<string> CreateThreadAsync()
@@ -53,7 +58,7 @@ namespace AIAssistant.Assistants
             await CancelPendingActionsAsync(threadId);
             await _client.CreateMessageAsync(threadId, MessageRole.User, [prompt]);
 
-            var updates = _client.CreateRunStreamingAsync(threadId, _assistant.Id);
+            var updates = _client.CreateRunStreamingAsync(threadId, _assistantId);
 
             try
             {

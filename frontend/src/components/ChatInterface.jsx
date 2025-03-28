@@ -47,7 +47,7 @@ const ChatInterface = () => {
             await fetch(`${apiUrl}/DeleteThread`, {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ "threadId": threadId, "prompt": "", "model": "" })
+                body: JSON.stringify({ threadId: threadId, prompt: "", model: "", assistant: "" })
             });
         } catch (error) {
             console.error('Failed to delete thread:', error);
@@ -63,7 +63,7 @@ const ChatInterface = () => {
                 activeThreadRef.current = remainingThreads[0];
                 selectChat(remainingThreads[0]);
             }
-            
+
             return remaining;
         });
 
@@ -119,13 +119,11 @@ const ChatInterface = () => {
                     >
                         {darkMode ? <BsSunFill style={{ color: 'white' }}/> : <BsMoonFill />}
                     </Button>
-
                     <AssistantDropdown
-                    selectedAssistant={selectedAssistant}
-                    setSelectedAssistant={setSelectedAssistant}
+                        selectedAssistant={selectedAssistant}
+                        setSelectedAssistant={setSelectedAssistant}
                     />
                 </div>
-
                 <ChatBox
                     messages={messages}
                     setMessages={setMessages}
@@ -133,6 +131,7 @@ const ChatInterface = () => {
                     setChats={setChats}
                     activeThreadRef={activeThreadRef}
                     initializeChat={initializeChat}
+                    selectedAssistant={selectedAssistant}
                 />
             </div>
             <ChatSidebar

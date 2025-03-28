@@ -13,6 +13,9 @@ namespace AIAssistant.Models
         [JsonPropertyName("model")]
         public required string Model { get; set; }
 
+        [JsonPropertyName("assistant")]
+        public required string Assistant { get; set; }
+
         public void Deconstruct(out string threadId, out string prompt)
         {
             threadId = ThreadId;

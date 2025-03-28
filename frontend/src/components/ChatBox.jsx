@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ChatArea from './ChatArea';
 
-function ChatBox({ setChats, initializeChat, activeThreadRef, messages, setMessages, darkMode }) {
+function ChatBox({ setChats, initializeChat, activeThreadRef, selectedAssistant, messages, setMessages, darkMode }) {
     const [waitingReply, setWaitingReply] = useState({});
     const waitingFirstMessageRef = useRef(false);
 
@@ -36,7 +36,8 @@ function ChatBox({ setChats, initializeChat, activeThreadRef, messages, setMessa
             body: JSON.stringify({
                 threadId: threadId,
                 prompt: action,
-                model: model
+                model: model,
+                assistant: selectedAssistant
             })
         });
 

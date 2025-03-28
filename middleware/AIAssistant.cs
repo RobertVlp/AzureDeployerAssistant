@@ -11,18 +11,12 @@ using System.ClientModel;
 
 namespace AIAssistant
 {
-    public class AIAssistant
+    public class AIAssistant(ILogger<AIAssistant> logger, IAssistant assistant, DbService dbClient)
     {
-        private readonly ILogger<AIAssistant> _logger;
-        private readonly IAssistant _assistant;
-        private readonly DbService _dbClient;
-
-        public AIAssistant(ILogger<AIAssistant> logger, IAssistant assistant, DbService dbClient)
-        {
-            _logger = logger;
-            _assistant = assistant;
-            _dbClient = dbClient;
-        }
+        private readonly ILogger<AIAssistant> _logger = logger;
+        private readonly IAssistant _assistant = assistant;
+        private readonly DbService _dbClient = dbClient;
+        private readonly Dictionary<string, string> _assistants = AssistantHelper.GetAssistants();
 
         [Function("HandleOptionsRequest")]
         public static HttpResponseData HandleOptionsAsync([HttpTrigger(AuthorizationLevel.Anonymous, "options", Route = "{*route}")] HttpRequestData req)
@@ -109,15 +103,15 @@ namespace AIAssistant
 
         private async Task<HttpResponseData> RunAssistantAsync(HttpRequestData req, Func<AssistantRequest, Stream, Task> RunAction)
         {
-            AssistantRequest data = await ParseRequestBodyAsync(req);
-            ChatMessage userMessage = new(data.ThreadId, "user", data.Prompt, DateTime.Now);
+            AssistantRequest requestData = await ParseRequestBodyAsync(req);
+            ChatMessage userMessage = new(requestData.ThreadId, "user", requestData.Prompt, DateTime.Now);
             ChatMessage? assistantMessage = null;
             HttpResponseData response = req.CreateResponse();
 
-            if (!data.Model.Equals("") && !data.Model.Equals(AssistantHelper.CurrentModel))
+            if (RunAction != _assistant.ConfirmActionAsync)
             {
-                _logger.LogInformation("Updating the assistant model to: {Model}", data.Model);
-                await AssistantHelper.UpdateAssistantModelAsync(data.Model);
+                await AssistantHelper.UpdateAssistantAsync(_assistant, _assistants[requestData.Assistant], requestData.Model);
+                _logger.LogInformation("Current assistant is: {Assistant}, with model: {Model}", requestData.Assistant, requestData.Model);
             }
 
             response.Headers.Add("Content-Type", "text/event-stream");
@@ -128,15 +122,15 @@ namespace AIAssistant
             try
             {
                 var capturingStream = new CapturingStream(response.Body);
-                await RunAction(data, capturingStream);
-                assistantMessage = new ChatMessage(data.ThreadId, "assistant", capturingStream.CapturedData, DateTime.Now);
+                await RunAction(requestData, capturingStream);
+                assistantMessage = new ChatMessage(requestData.ThreadId, "assistant", capturingStream.CapturedData, DateTime.Now);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during streaming.");
                 var errorMessage = $"Error: {ex.Message}\n";
 
-                assistantMessage = new ChatMessage(data.ThreadId, "assistant", errorMessage, DateTime.Now);
+                assistantMessage = new ChatMessage(requestData.ThreadId, "assistant", errorMessage, DateTime.Now);
                 await response.Body.WriteAsync(Encoding.UTF8.GetBytes(errorMessage));
             }
             finally
@@ -165,10 +159,10 @@ namespace AIAssistant
         {
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
 
-            AssistantRequest data = JsonSerializer.Deserialize<AssistantRequest>(requestBody)
+            AssistantRequest requestData = JsonSerializer.Deserialize<AssistantRequest>(requestBody)
                 ?? throw new BadHttpRequestException("Invalid request: body is empty.");
 
-            return data;
+            return requestData;
         }
 
         private static async Task<HttpResponseData> CreateResponse(HttpRequestData req, HttpStatusCode statusCode, string message)

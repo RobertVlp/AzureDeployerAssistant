@@ -1,0 +1,18 @@
+{
+  "name": "run_kql_script",
+  "description": "Function that runs a KQL script in Azure Resource Graph.",
+  "strict": true,
+  "parameters": {
+    "type": "object",
+    "required": [
+      "kql_script"
+    ],
+    "properties": {
+      "kql_script": {
+        "type": "string",
+        "description": "The generated KQL script according to the user's query."
+      }
+    },
+    "additionalProperties": false
+  }
+}
