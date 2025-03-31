@@ -113,16 +113,13 @@ const ChatInterface = () => {
                 <div className="chat-interface-header">
                     <h1 className="page-heading">Cloud Resource AI Bot</h1>
                     <Button 
-                        onClick={toggleDarkMode} 
+                        onClick={toggleDarkMode}
                         className="theme-toggle-button"
                         variant={darkMode ? 'dark' : 'light'}
                     >
                         {darkMode ? <BsSunFill style={{ color: 'white' }}/> : <BsMoonFill />}
                     </Button>
-                    <AssistantDropdown
-                        selectedAssistant={selectedAssistant}
-                        setSelectedAssistant={setSelectedAssistant}
-                    />
+                    <AssistantDropdown setSelectedAssistant={setSelectedAssistant}/>
                 </div>
                 <ChatBox
                     messages={messages}
