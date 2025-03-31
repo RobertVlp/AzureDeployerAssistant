@@ -1,10 +1,10 @@
+using System.Collections.Concurrent;
+
 namespace AIAssistant.Models
 {
     public interface IAssistant
     {
-        HashSet<string> DeletedThreads { get; }
-
-        string AssistantId { get; set; }
+        ConcurrentDictionary<string, byte> DeletedThreads { get; }
         
         Task<string> CreateThreadAsync();
 

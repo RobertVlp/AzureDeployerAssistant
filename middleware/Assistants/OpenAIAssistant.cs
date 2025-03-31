@@ -7,6 +7,7 @@ using Newtonsoft.Json.Linq;
 using System.Text.Json;
 using System.Net;
 using AIAssistant.Services;
+using System.Collections.Concurrent;
 
 namespace AIAssistant.Assistants
 {
@@ -15,25 +16,12 @@ namespace AIAssistant.Assistants
     {
         private readonly ILogger<IAssistant> _logger = logger;
         private readonly AssistantClient _client = new(Environment.GetEnvironmentVariable("OPENAI_API_KEY"));
-        private readonly Dictionary<string, (string, Queue<RequiredActionUpdate>)> _pendingRequests = [];
-        private readonly HashSet<string> _deletedThreads = [];
+        private readonly ConcurrentDictionary<string, (string runId, Queue<RequiredActionUpdate> pendingActions)> _pendingRequests = [];
+        private readonly ConcurrentDictionary<string, byte> _deletedThreads = [];
         private static readonly JsonSerializerOptions _jsonSerializerOptions = new() { WriteIndented = true };
-        private string _assistantId = AssistantHelper.DefaultAssistantId;
+        private readonly ConcurrentDictionary<string, (string id, string model)> _assistants = AssistantHelper.Assistants;
 
-        public HashSet<string> DeletedThreads => _deletedThreads;
-
-        public string AssistantId
-        {
-            get => _assistantId;
-            set
-            {
-                if (string.IsNullOrEmpty(value))
-                {
-                    throw new ArgumentException("AssistantId cannot be null or empty.");
-                }
-                _assistantId = value;
-            }
-        }
+        public ConcurrentDictionary<string, byte> DeletedThreads => _deletedThreads;
 
         public async Task<string> CreateThreadAsync()
         {
@@ -44,7 +32,7 @@ namespace AIAssistant.Assistants
         public async Task<string> DeleteThreadAsync(AssistantRequest request)
         {
             (string threadId, _) = request;
-            _deletedThreads.Add(threadId);
+            _deletedThreads[threadId] = 0;
             await CancelPendingActionsAsync(threadId);
             await _client.DeleteThreadAsync(threadId);
 
@@ -58,7 +46,8 @@ namespace AIAssistant.Assistants
             await CancelPendingActionsAsync(threadId);
             await _client.CreateMessageAsync(threadId, MessageRole.User, [prompt]);
 
-            var updates = _client.CreateRunStreamingAsync(threadId, _assistantId);
+            string assistantId = await GetAssistantIdAsync(request);
+            var updates = _client.CreateRunStreamingAsync(threadId, assistantId);
 
             try
             {
@@ -72,6 +61,26 @@ namespace AIAssistant.Assistants
             {
                 await responseStream.FlushAsync();
             }
+        }
+
+        private async ValueTask<string> GetAssistantIdAsync(AssistantRequest request)
+        {
+            (string assistantId, string model) = _assistants[request.Assistant];
+
+            if (!model.Equals(request.Model))
+            {
+                _logger.LogInformation("Updating model for assistant '{assistant}' to '{model}'.", request.Assistant, request.Model);
+                var res = await AssistantHelper.UpdateAssistantModelAsync(assistantId, request.Model);
+
+                if (res.StatusCode != HttpStatusCode.OK)
+                {
+                    throw new InvalidOperationException($"Failed to update assistant model: {res.ReasonPhrase}");
+                }
+
+                _assistants[request.Assistant] = (assistantId, request.Model);
+            }
+
+            return assistantId;
         }
 
         public async Task ConfirmActionAsync(AssistantRequest request, Stream responseStream)
@@ -99,9 +108,9 @@ namespace AIAssistant.Assistants
                     tasks.Add(CallToolAsync(actionUpdate));
                 }
                 
-                _pendingRequests.Remove(threadId);
+                _pendingRequests.TryRemove(threadId, out _);
 
-                if (_deletedThreads.Contains(threadId))
+                if (_deletedThreads.ContainsKey(threadId))
                 {
                     return;
                 }
@@ -127,14 +136,14 @@ namespace AIAssistant.Assistants
             }
         }
 
-        private async Task CancelPendingActionsAsync(string threadId)
+        private async ValueTask CancelPendingActionsAsync(string threadId)
         {
             if (_pendingRequests.TryGetValue(threadId, out (string, Queue<RequiredActionUpdate>) value))
             {
                 _logger.LogInformation("Cancelling pending actions for thread {threadId}.", threadId);
 
                 (string runId, _) = value;
-                _pendingRequests.Remove(threadId);
+                _pendingRequests.TryRemove(threadId, out _);
 
                 var run = await _client.GetRunAsync(threadId, runId);
 
@@ -207,7 +216,7 @@ namespace AIAssistant.Assistants
             {
                 await foreach (ThreadRun run in runs)
                 {
-                    if (run.Status != RunStatus.Expired && run.Status != RunStatus.Completed)
+                    if (run.Status == RunStatus.InProgress || run.Status == RunStatus.Queued)
                     {
                         await _client.CancelRunAsync(threadId, run.Id);
                     }
@@ -239,7 +248,7 @@ namespace AIAssistant.Assistants
                         List<Task<ToolOutput>> tasks = [.. allActions.Select(CallToolAsync)];
                         allActions.Clear();
 
-                        if (_deletedThreads.Contains(currentRun.ThreadId))
+                        if (_deletedThreads.ContainsKey(currentRun.ThreadId))
                         {
                             break;
                         }

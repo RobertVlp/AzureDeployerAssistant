@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.ClientModel;
 using System.Net;
 using AIAssistant.Models;
+using System.Collections.Concurrent;
 
 namespace AIAssistant.Services;
 
@@ -13,14 +14,13 @@ public class AssistantHelper
     private static readonly string _apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY")
         ?? throw new InvalidOperationException("OPENAI_API_KEY is not set.");
     private static readonly AssistantClient _client = new(_apiKey);
+    private static readonly ConcurrentDictionary<string, (string id, string model)> _assistants = GetAssistants();
 
-    public static string DefaultAssistantId { get; private set; } = string.Empty;
+    public static ConcurrentDictionary<string, (string id, string model)> Assistants => _assistants;
 
     public static void InitializeAssistant()
     {
-        Dictionary<string, string> assistants = GetAssistants();
-
-        if (assistants.Count == 0)
+        if (_assistants.IsEmpty)
         {
             string[] directories = Directory.GetDirectories("..\\..\\configs");
             List<string> allFunctionFiles = [];
@@ -59,10 +59,6 @@ public class AssistantHelper
             // Create default assistant
             string defaultConfigFile = Path.Combine("..\\..\\configs", "default", "config.json");
             CreateAssistant(defaultConfigFile, [.. allFunctionFiles]);
-        }
-        else
-        {
-            DefaultAssistantId = assistants["Default"];
         }
     }
 
@@ -115,11 +111,7 @@ public class AssistantHelper
         try
         {
             var assistant = _client.CreateAssistant(assistantConfig["model"]!.ToString(), assistantOptions).Value;
-
-            if (assistantConfig["name"]!.ToString().Equals("Default"))
-            {
-                DefaultAssistantId = assistant.Id;
-            }
+            _assistants.TryAdd(assistant.Name, (assistant.Id, assistant.Model));
         }
         catch (Exception ex)
         {
@@ -127,20 +119,22 @@ public class AssistantHelper
         }
     }
 
-    public static async Task UpdateAssistantModelAsync(string assistantId, string model)
+    public static Task<HttpResponseMessage> UpdateAssistantModelAsync(string assistantId, string model)
     {
         var httpClient = new HttpClient();
         httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_apiKey}");
         httpClient.DefaultRequestHeaders.Add("OpenAI-Beta", "assistants=v2");
         var reasoning_effort = model.StartsWith('o') ? "high" : null;
+        int? temperature = model.StartsWith('o') ? null : 1;
+        int? top_p = model.StartsWith('o') ? null : 1;
         
         var content = new StringContent(
-            JsonSerializer.Serialize(new { model, reasoning_effort }),
+            JsonSerializer.Serialize(new { model, reasoning_effort, temperature, top_p }),
             System.Text.Encoding.UTF8, 
             "application/json"
         );
 
-        await httpClient.PostAsync($"https://api.openai.com/v1/assistants/{assistantId}", content).ConfigureAwait(false);
+        return httpClient.PostAsync($"https://api.openai.com/v1/assistants/{assistantId}", content);
     }
 
     public static async Task UpdateChatHistoryThreadsAsync(Dictionary<string, List<dynamic>> chatHistory, DbService dbClient)
@@ -185,28 +179,16 @@ public class AssistantHelper
         }
     }
 
-    public static Dictionary<string, string> GetAssistants()
+    private static ConcurrentDictionary<string, (string id, string model)> GetAssistants()
     {
-        var assistants = new Dictionary<string, string>();
+        var assistants = new ConcurrentDictionary<string, (string id, string model)>();
         var assistantsList = _client.GetAssistants();
 
         foreach (var assistant in assistantsList)
         {
-            assistants.Add(assistant.Name, assistant.Id);
+            assistants.TryAdd(assistant.Name, (assistant.Id, assistant.Model));
         }
 
         return assistants;
-    }
-
-    public static async Task UpdateAssistantAsync(IAssistant assistant, string assistantId, string model)
-    {
-        assistant.AssistantId = assistantId;
-        var currentAssistant = await _client.GetAssistantAsync(assistantId).ConfigureAwait(false);
-        var currentModel = currentAssistant.Value.Model;
-
-        if (currentModel != model)
-        {
-            await UpdateAssistantModelAsync(assistantId, model).ConfigureAwait(false);
-        }
     }
 }

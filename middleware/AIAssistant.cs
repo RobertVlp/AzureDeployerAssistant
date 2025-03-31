@@ -16,7 +16,6 @@ namespace AIAssistant
         private readonly ILogger<AIAssistant> _logger = logger;
         private readonly IAssistant _assistant = assistant;
         private readonly DbService _dbClient = dbClient;
-        private readonly Dictionary<string, string> _assistants = AssistantHelper.GetAssistants();
 
         [Function("HandleOptionsRequest")]
         public static HttpResponseData HandleOptionsAsync([HttpTrigger(AuthorizationLevel.Anonymous, "options", Route = "{*route}")] HttpRequestData req)
@@ -108,12 +107,6 @@ namespace AIAssistant
             ChatMessage? assistantMessage = null;
             HttpResponseData response = req.CreateResponse();
 
-            if (RunAction != _assistant.ConfirmActionAsync)
-            {
-                await AssistantHelper.UpdateAssistantAsync(_assistant, _assistants[requestData.Assistant], requestData.Model);
-                _logger.LogInformation("Current assistant is: {Assistant}, with model: {Model}", requestData.Assistant, requestData.Model);
-            }
-
             response.Headers.Add("Content-Type", "text/event-stream");
             response.Headers.Add("Cache-Control", "no-cache");
             response.Headers.Add("Connection", "keep-alive");
@@ -143,7 +136,7 @@ namespace AIAssistant
 
         private void SaveChatMessages(ChatMessage userMessage, ChatMessage assistantMessage)
         {
-            if (!_assistant.DeletedThreads.Contains(userMessage.ThreadId))
+            if (!_assistant.DeletedThreads.ContainsKey(userMessage.ThreadId))
             {
                 Task.Run(async () => 
                 {
