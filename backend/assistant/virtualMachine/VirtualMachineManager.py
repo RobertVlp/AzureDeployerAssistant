@@ -40,9 +40,16 @@ class VirtualMachineManager:
 
         try:
             # Create virtual network
-            self.network_manager.create_virtual_network(resource_group_name, f'{vm_name}VNet', location)
+            res = self.network_manager.create_virtual_network(resource_group_name, f'{vm_name}VNet', location)
+
+            if res.startswith("Failed"):
+                return res
             # Create subnet
-            self.network_manager.create_subnet(resource_group_name, f'{vm_name}VNet', f'{vm_name}Subnet')
+            res = self.network_manager.create_subnet(resource_group_name, f'{vm_name}VNet', f'{vm_name}Subnet')
+
+            if res.startswith("Failed"):
+                return res
+
             subnet = self.network_client.subnets.get(resource_group_name, f'{vm_name}VNet', f'{vm_name}Subnet')
 
             # Create public IP address

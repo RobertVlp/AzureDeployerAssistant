@@ -20,7 +20,6 @@ services:
     ports:
       - "7151:80"
     environment:
-      ASSISTANT_ID: ${ASSISTANT_ID}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       DB_CONNECTION_STRING: ${DB_CONNECTION_STRING}
       CORS_ORIGINS: ${CORS_ORIGINS}
