@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ChatArea from './ChatArea';
 
-function ChatBox({ setChats, initializeChat, activeThreadRef, selectedAssistant, messages, setMessages, darkMode }) {
+function ChatBox({ setChats, initializeChat, activeThreadRef, selectedAssistant, messages, setMessages }) {
     const [waitingReply, setWaitingReply] = useState({});
     const waitingFirstMessageRef = useRef(false);
 
@@ -83,7 +83,6 @@ function ChatBox({ setChats, initializeChat, activeThreadRef, selectedAssistant,
                 setMessages={setMessages}
                 handleActionAsync={handleActionAsync}
                 isWaitingReply={waitingReply[activeThreadRef.current] || waitingFirstMessageRef.current}
-                darkMode={darkMode}
             />
         </div>
     );

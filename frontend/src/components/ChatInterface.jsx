@@ -1,13 +1,10 @@
 import ChatBox from "./ChatBox";
-import { ThemeContext } from '../App';
-import { BsMoonFill, BsSunFill } from 'react-icons/bs';
-import { Button } from 'react-bootstrap';
-import React, { useState, useRef, useEffect, useContext } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import ChatSidebar from './ChatSidebar';
 import AssistantDropdown from './AssistantDropdown';
+import DarkModeButton from "./DarkModeButton";
 
 const ChatInterface = () => {
-    const { darkMode, setDarkMode } = useContext(ThemeContext);
     const [selectedAssistant, setSelectedAssistant] = useState("Default");
     const [chats, setChats] = useState({});
     const [messages, setMessages] = useState([]);
@@ -16,10 +13,6 @@ const ChatInterface = () => {
     
     const initializeChat = async () => {
         activeThreadRef.current = await createThreadAsync();
-    };
-
-    const toggleDarkMode = () => {
-        setDarkMode(!darkMode);
     };
 
     const createThreadAsync = async () => {
@@ -112,19 +105,12 @@ const ChatInterface = () => {
             <div className="chat-container">
                 <div className="chat-interface-header">
                     <h1 className="page-heading">Cloud Resource AI Bot</h1>
-                    <Button 
-                        onClick={toggleDarkMode}
-                        className="theme-toggle-button"
-                        variant={darkMode ? 'dark' : 'light'}
-                    >
-                        {darkMode ? <BsSunFill style={{ color: 'white' }}/> : <BsMoonFill />}
-                    </Button>
+                    <DarkModeButton />
                     <AssistantDropdown setSelectedAssistant={setSelectedAssistant}/>
                 </div>
                 <ChatBox
                     messages={messages}
                     setMessages={setMessages}
-                    darkMode={darkMode}
                     setChats={setChats}
                     activeThreadRef={activeThreadRef}
                     initializeChat={initializeChat}

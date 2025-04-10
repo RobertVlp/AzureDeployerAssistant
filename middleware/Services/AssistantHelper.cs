@@ -3,7 +3,6 @@ using Newtonsoft.Json.Linq;
 using System.Text.Json;
 using System.ClientModel;
 using System.Net;
-using AIAssistant.Models;
 using System.Collections.Concurrent;
 
 namespace AIAssistant.Services;

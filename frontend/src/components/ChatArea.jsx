@@ -2,7 +2,7 @@ import React from 'react';
 import MessageList from './MessageList';
 import ChatInput from './ChatInput';
 
-function ChatArea({ messages, setMessages, handleActionAsync, isWaitingReply, darkMode }) {
+function ChatArea({ messages, setMessages, handleActionAsync, isWaitingReply }) {
     const apiUrl = `${import.meta.env.VITE_API_URL}` || '';  
 
     const handleSubmitAsync = async (inputMessage, model) => {
@@ -40,7 +40,6 @@ function ChatArea({ messages, setMessages, handleActionAsync, isWaitingReply, da
             <ChatInput 
                 onSubmit={handleSubmitAsync}
                 isWaitingReply={isWaitingReply}
-                darkMode={darkMode}
             />
         </div>
     );

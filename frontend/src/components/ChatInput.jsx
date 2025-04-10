@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Form, InputGroup, Button } from 'react-bootstrap';
 import { FaLightbulb, FaPaperPlane } from 'react-icons/fa';
 
-function ChatInput({ onSubmit, isWaitingReply, darkMode }) {
+function ChatInput({ onSubmit, isWaitingReply }) {
     const [inputMessage, setInputMessage] = useState('');
     const [model, setModel] = useState('gpt-4o-mini');
     const textareaRef = useRef(null);
@@ -67,7 +67,7 @@ function ChatInput({ onSubmit, isWaitingReply, darkMode }) {
                         </Button>
                         <Button 
                             type="submit" 
-                            variant={darkMode ? 'light' : 'dark'} 
+                            variant={localStorage.getItem('darkMode') === 'true' ? 'light' : 'dark'} 
                             disabled={isWaitingReply}
                             className='send-button'
                         >
