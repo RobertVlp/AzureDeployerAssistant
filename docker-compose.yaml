@@ -16,13 +16,9 @@ services:
     container_name: middleware
     build:
       context: ./middleware/
-      dockerfile: Dockerfile
-    ports:
-      - "7151:80"
     environment:
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       DB_CONNECTION_STRING: ${DB_CONNECTION_STRING}
-      CORS_ORIGINS: ${CORS_ORIGINS}
       BACKEND_ENDPOINT: ${BACKEND_ENDPOINT}
     depends_on:
       - postgres
@@ -31,7 +27,6 @@ services:
     container_name: backend
     build:
       context: ./backend/
-      dockerfile: Dockerfile
     environment:
       AZURE_SUBSCRIPTION_ID: ${AZURE_SUBSCRIPTION_ID}
       AZURE_TENANT_ID: ${AZURE_TENANT_ID}
@@ -42,13 +37,28 @@ services:
     container_name: frontend
     build:
       context: ./frontend/
-      dockerfile: Dockerfile
     ports:
       - "3000:3000"
     depends_on:
       - middleware
     environment:
       VITE_API_URL: ${VITE_API_URL}
+
+  kong:
+    container_name: kong
+    image: kong:latest
+    ports:
+      - "8000:8000"
+    environment:
+      KONG_DATABASE: 'off'
+      KONG_DECLARATIVE_CONFIG: /usr/local/kong/declarative/kong.yaml
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001, 0.0.0.0:8444 ssl
+    volumes:
+      - ./kong:/usr/local/kong/declarative
 
 volumes:
   data:

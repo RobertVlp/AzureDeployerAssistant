@@ -7,8 +7,8 @@ using Microsoft.Extensions.Hosting;
 
 AssistantHelper.InitializeAssistant();
 
-var builder = Host.CreateDefaultBuilder(args)
-    .ConfigureFunctionsWebApplication(app => app.UseMiddleware<CorsMiddleware>())
+var builder = new HostBuilder()
+    .ConfigureFunctionsWebApplication()
     .ConfigureServices(services => 
     {
         services.AddSingleton<IAssistant, OpenAIAssistant>();

@@ -104,9 +104,9 @@ const ChatInterface = () => {
         <div className="chat-interface">
             <div className="chat-container">
                 <div className="chat-interface-header">
-                    <h1 className="page-heading">Cloud Resource AI Bot</h1>
-                    <DarkModeButton />
                     <AssistantDropdown setSelectedAssistant={setSelectedAssistant}/>
+                    <h1 className="page-heading"><a href="/">Cloud Resource AI Bot</a></h1>
+                    <DarkModeButton />
                 </div>
                 <ChatBox
                     messages={messages}

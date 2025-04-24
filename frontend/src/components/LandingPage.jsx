@@ -5,7 +5,7 @@ import DarkModeButton from "./DarkModeButton";
 export default function LandingPage() {
     const services = [
         { name: "Resource Groups", description: "Manage and organize your Azure resources.", icon: "fas fa-layer-group" },
-        { name: "Storage", description: "Efficiently store and manage the data essential to your application.", icon: "fas fa-database" },
+        { name: "Storage", description: "Efficiently store and manage essential data for your application.", icon: "fas fa-database" },
         { name: "Virtual Machines", description: "Create and manage virtual machines in the cloud.", icon: "fas fa-server" },
         { name: "Networking", description: "Set up and manage networking resources.", icon: "fas fa-network-wired" },
         { name: "Key Vault", description: "Safeguard cryptographic keys and secrets.", icon: "fas fa-key" },
@@ -17,7 +17,7 @@ export default function LandingPage() {
         <div className="landing-page-container">
             <div className="landing-page">
                 <div className="landing-header">
-                    <h1>Cloud Resource AI Bot</h1>
+                    <h1><a href="/">Cloud Resource AI Bot</a></h1>
                     <DarkModeButton />
                 </div>
                 <div className="services-container">
