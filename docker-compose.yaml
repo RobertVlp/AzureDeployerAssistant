@@ -2,8 +2,6 @@ services:
   postgres:
     container_name: postgres-container
     image: postgres:14.17
-    ports:
-      - "5432:5432"
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: admin
