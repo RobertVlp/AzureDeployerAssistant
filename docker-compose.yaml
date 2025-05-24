@@ -12,8 +12,7 @@ services:
 
   middleware:
     container_name: middleware
-    build:
-      context: ./middleware/
+    image: ghcr.io/robertvlp/crab_middleware:latest
     environment:
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       DB_CONNECTION_STRING: ${DB_CONNECTION_STRING}
@@ -23,8 +22,7 @@ services:
 
   backend:
     container_name: backend
-    build:
-      context: ./backend/
+    image: ghcr.io/robertvlp/crab_backend:latest
     environment:
       AZURE_SUBSCRIPTION_ID: ${AZURE_SUBSCRIPTION_ID}
       AZURE_TENANT_ID: ${AZURE_TENANT_ID}
@@ -33,8 +31,7 @@ services:
 
   frontend:
     container_name: frontend
-    build:
-      context: ./frontend/
+    image: ghcr.io/robertvlp/crab_frontend:latest
     ports:
       - "3000:3000"
     depends_on:
