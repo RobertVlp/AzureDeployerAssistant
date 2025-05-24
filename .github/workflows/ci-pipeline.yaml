@@ -1,0 +1,35 @@
+name: CI
+
+# Controls when the workflow will run
+on:
+  push:
+    branches: [ "master" ]
+    
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        component: [backend, middleware, frontend]
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}             # GitHub username (actor triggering the workflow)
+          password: ${{ secrets.GITHUB_TOKEN }}     # Automatically provided GitHub token
+
+      - name: Build Docker image for ${{ matrix.component }}
+        run: docker build --pull -t ghcr.io/robertvlp/crab_${{ matrix.component }}:latest ./${{ matrix.component }}
+  
+      - name: Push Docker image
+        run: docker push ghcr.io/robertvlp/crab_${{ matrix.component }}:latest
