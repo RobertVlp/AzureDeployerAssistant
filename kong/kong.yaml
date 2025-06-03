@@ -3,6 +3,7 @@ _format_version: "3.0"
 services:
   - name: middleware
     url: http://middleware/api
+    read_timeout: 600000  # 10 minutes
     routes:
       - name: middleware-route
         paths: 

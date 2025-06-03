@@ -164,7 +164,7 @@ namespace AIAssistant.Assistants
 
             HttpClient client = new()
             {
-                Timeout = TimeSpan.FromSeconds(300),
+                Timeout = TimeSpan.FromSeconds(600),
             };
 
             string body = JsonSerializer.Serialize(new { name, arguments });
