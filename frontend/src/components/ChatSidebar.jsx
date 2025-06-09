@@ -1,4 +1,3 @@
-import React from 'react';
 import { FaPlus, FaTrash } from 'react-icons/fa';
 
 function ChatSidebar({ chats, activeThreadId, onCreateNewChat, onDeleteChat, onSelectChat }) {

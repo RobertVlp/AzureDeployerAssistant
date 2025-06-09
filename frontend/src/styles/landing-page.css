@@ -94,3 +94,34 @@
     border-radius: 8px !important;
     background-color: #007bff;
 }
+
+.dark-mode.modal-content {
+    background-color: none !important;
+}
+
+.modal-footer {
+    justify-content: space-between !important;
+}
+
+.modal-content.dark-mode {
+    background-color: #181818;
+}
+
+.dark-mode.modal-footer {
+    background-color: #181818;
+}
+
+.dark-mode .btn-close {
+    filter: invert(1);
+}
+
+.modal-footer .btn-secondary {
+    background-color: #e0e0e0;
+    color: #23272b;
+    border: none;
+}
+
+.modal-footer .btn-primary {
+    background-color: #007bff;
+    border: none !important;
+}

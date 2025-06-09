@@ -1,5 +1,5 @@
 import { Dropdown, DropdownButton } from "react-bootstrap";
-import React, { useState } from "react";
+import { useState } from "react";
 
 export default function AssistantDropdown({ setSelectedAssistant }) {
     const [selectedKey, setSelectedKey] = useState(1);

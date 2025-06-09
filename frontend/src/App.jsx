@@ -1,4 +1,4 @@
-import React, { createContext, useState } from 'react';
+import { createContext, useState } from 'react';
 import  { BrowserRouter, Route, Routes } from 'react-router-dom';
 import ChatInterface from './components/ChatInterface';
 import LandingPage from './components/LandingPage';

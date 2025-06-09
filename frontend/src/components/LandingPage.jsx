@@ -1,8 +1,18 @@
-import React from "react";
+import { useState } from "react";
 import { Button, Card } from "react-bootstrap";
 import DarkModeButton from "./DarkModeButton";
+import ResourceModal from "./ResourceModal";
 
 export default function LandingPage() {
+    const [show, setShow] = useState(false);
+    const [selectedResource, setSelectedResource] = useState("");
+    
+    const handleClose = () => setShow(false);
+    const handleShow = (resourceName) => {
+        setSelectedResource(resourceName);
+        setShow(true);
+    };
+
     const services = [
         { name: "Resource Groups", description: "Manage and organize your Azure resources.", icon: "fas fa-layer-group" },
         { name: "Storage", description: "Efficiently store and manage essential data for your application.", icon: "fas fa-database" },
@@ -23,7 +33,7 @@ export default function LandingPage() {
                 <div className="services-container">
                     <div className="service-list">
                         {services.map((service, index) => (
-                            <Card key={index} className="service-card">
+                            <Card key={index} className="service-card" onClick={() => handleShow(service.name)}>
                                 <Card.Body>
                                     <Card.Title><i className={service.icon}></i> {service.name}</Card.Title>
                                     <Card.Text>{service.description}</Card.Text>
@@ -42,6 +52,12 @@ export default function LandingPage() {
             <footer className="landing-footer">
                 <p>&copy; 2025 Cloud Resource AI Bot</p>
             </footer>
+
+            <ResourceModal 
+                resource={selectedResource}
+                handleClose={handleClose}
+                show={show}
+            />
         </div>
     );
 }

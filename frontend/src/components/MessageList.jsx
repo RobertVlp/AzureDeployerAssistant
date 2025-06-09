@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 import { ListGroup, Spinner, Container, Button } from 'react-bootstrap';
 import { marked } from 'marked';
 

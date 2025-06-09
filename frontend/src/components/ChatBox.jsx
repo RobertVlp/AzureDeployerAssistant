@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import ChatArea from './ChatArea';
 
 function ChatBox({ setChats, initializeChat, activeThreadRef, selectedAssistant, messages, setMessages }) {

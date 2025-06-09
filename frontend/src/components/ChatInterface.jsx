@@ -1,5 +1,5 @@
 import ChatBox from "./ChatBox";
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import ChatSidebar from './ChatSidebar';
 import AssistantDropdown from './AssistantDropdown';
 import DarkModeButton from "./DarkModeButton";

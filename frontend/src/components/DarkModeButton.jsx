@@ -1,5 +1,5 @@
 import { ThemeContext } from "../App";
-import React, { useContext } from "react";
+import { useContext } from "react";
 import { Button } from "react-bootstrap";
 import { BsMoonFill, BsSunFill } from "react-icons/bs";
 
